@@ -34,7 +34,10 @@ export function useMembers() {
 
   const handleDeleteMember = useCallback((id: string) => {
     setAllMembers(prev => prev.map(m => m.id === id ? { ...m, isDeleted: true } : m));
-  }, []);
+    if (id === currentMemberId) {
+      setCurrentMemberId('all');
+    }
+  }, [currentMemberId]);
 
   return { 
     members: visibleMembers, 

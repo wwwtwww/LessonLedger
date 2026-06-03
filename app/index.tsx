@@ -25,6 +25,7 @@ import AddClassModal from '../components/AddClassModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useMembers } from '../hooks/useMembers';
 import { useClasses } from '../hooks/useClasses';
+import { Member, ClassItem } from '../types';
 
 export default function App() {
   const { t } = useLanguage();
@@ -49,8 +50,8 @@ export default function App() {
 
   const [isAddMemberVisible, setIsAddMemberVisible] = useState(false);
   const [isAddClassVisible, setIsAddClassVisible] = useState(false);
-  const [editingMember, setEditingMember] = useState<any>(null);
-  const [editingClass, setEditingClass] = useState<any>(null);
+  const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [editingClass, setEditingClass] = useState<ClassItem | null>(null);
 
   const onSaveMember = (data: { id?: string; name: string; icon: string; themeColor: string }) => {
     if (data.id) {
@@ -82,10 +83,19 @@ export default function App() {
     setEditingClass(null);
   };
 
-  const handleMemberLongPress = (member: any) => {
+  const handleMemberLongPress = (member: Member) => {
     if (Platform.OS === 'web') {
-      const choice = window.confirm(`Edit or Delete ${member.name}? (OK for Edit, Cancel for Delete choice... wait, window.confirm is limited)`);
-      // Simplified for web if needed, but let's stick to the prompt's Alert style
+      const isEdit = window.confirm(`${t.edit} ${member.name}? (${t.confirm} -> ${t.edit}, ${t.cancel} -> ${t.delete})`);
+      if (isEdit) {
+        setEditingMember(member);
+        setIsAddMemberVisible(true);
+      } else {
+        const msg = t.confirmDeleteMemberMsg.replace('{member}', member.name);
+        if (window.confirm(msg)) {
+          handleDeleteMember(member.id);
+        }
+      }
+      return;
     }
 
     Alert.alert(
