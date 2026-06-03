@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  ScrollView, 
-  TouchableOpacity, 
-  Alert, 
-  Platform 
+import {
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  Platform
 } from 'react-native';
+import AddMemberModal from '../components/AddMemberModal';
+import AddClassModal from '../components/AddClassModal';
 
 // 1. 国际化多语言字典库 (i18n)
 const i18n = {
@@ -113,12 +115,30 @@ export default function App() {
   const t = i18n[lang];
 
   // 成员状态管理（支持儿童与成人）
-  const [members] = useState<Member[]>([
+  const [members, setMembers] = useState<Member[]>([
     { id: 'm1', name: lang === 'zh-CN' ? '哥哥' : 'Brother', icon: '👦', themeColor: '#3B82F6' },
     { id: 'm2', name: lang === 'zh-CN' ? '妹妹' : 'Sister', icon: '👧', themeColor: '#EC4899' },
     { id: 'm3', name: lang === 'zh-CN' ? '妈妈' : 'Mom', icon: '🏋️', themeColor: '#10B981' },
   ]);
   const [currentMemberId, setCurrentMemberId] = useState<string>('all');
+
+  const [isAddMemberVisible, setIsAddMemberVisible] = useState(false);
+  const [isAddClassVisible, setIsAddClassVisible] = useState(false);
+
+  const handleAddMember = (name: string, icon: string, themeColor: string) => {
+    setMembers([...members, { id: 'm' + Date.now(), name, icon, themeColor }]);
+    setIsAddMemberVisible(false);
+  };
+
+  const handleAddClass = (classItem: { name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: string }) => {
+    setClasses([...classes, {
+      ...classItem,
+      id: 'c' + Date.now(),
+      doneLessons: 0,
+      unitType: 'lesson'
+    }]);
+    setIsAddClassVisible(false);
+  };
 
   // 核心课程数据
   const [classes, setClasses] = useState<ClassItem[]>([
@@ -225,7 +245,17 @@ export default function App() {
             </TouchableOpacity>
           );
         })}
+        <TouchableOpacity 
+          style={[styles.memberTab, styles.addMemberTab]} 
+          onPress={() => setIsAddMemberVisible(true)}
+        >
+          <Text style={styles.addMemberTabText}>+ {t.addMember}</Text>
+        </TouchableOpacity>
       </ScrollView>
+
+      <TouchableOpacity style={styles.addCourseBtn} onPress={() => setIsAddClassVisible(true)}>
+        <Text style={styles.addCourseBtnText}>+ {t.addCourse}</Text>
+      </TouchableOpacity>
 
       {/* 4. 智能动态项目卡片流 */}
       <View style={styles.listSection}>
@@ -299,6 +329,20 @@ export default function App() {
           ))
         )}
       </View>
+
+      <AddMemberModal
+        visible={isAddMemberVisible}
+        onClose={() => setIsAddMemberVisible(false)}
+        onAdd={handleAddMember}
+        t={t}
+      />
+      <AddClassModal
+        visible={isAddClassVisible}
+        onClose={() => setIsAddClassVisible(false)}
+        onAdd={handleAddClass}
+        members={members}
+        t={t}
+      />
     </ScrollView>
   );
 }
@@ -327,6 +371,10 @@ const styles = StyleSheet.create({
   memberTabActiveAll: { backgroundColor: '#0F172A', borderColor: 'transparent' },
   memberTabText: { fontSize: 13, fontWeight: '700', color: '#64748B' },
   memberTabTextActive: { color: '#FFFFFF' },
+  addMemberTab: { borderStyle: 'dashed', backgroundColor: 'transparent' },
+  addMemberTabText: { fontSize: 13, fontWeight: '700', color: '#64748B' },
+  addCourseBtn: { backgroundColor: '#0F172A', borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginBottom: 16 },
+  addCourseBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
   listSection: { marginBottom: 20 },
   classCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0', shadowColor: '#0F172A', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 4, elevation: 2 },
   classCardWarning: { borderColor: '#EF4444', shadowColor: '#EF4444', shadowOpacity: 0.08 },
