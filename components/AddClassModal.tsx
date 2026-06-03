@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal,
   View,
@@ -16,7 +16,7 @@ import { Member, ClassItem } from '../types';
 interface AddClassModalProps {
   visible: boolean;
   onClose: () => void;
-  onAdd: (classItem: { name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: string }) => void;
+  onAdd: (data: Partial<ClassItem> & { name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: string; unitType: 'lesson' | 'session' }) => void;
   members: Member[];
   initialData?: ClassItem | null;
 }
@@ -28,25 +28,30 @@ export default function AddClassModal({ visible, onClose, onAdd, members, initia
   const [totalPrice, setTotalPrice] = useState('');
   const [totalLessons, setTotalLessons] = useState('');
   const [schedule, setSchedule] = useState('');
+  const [unitType, setUnitType] = useState<'lesson' | 'session'>('lesson');
   const [errors, setErrors] = useState<{ name?: string; memberId?: string }>({});
+  const prevVisible = useRef(visible);
 
   useEffect(() => {
-    if (visible) {
+    if (visible && !prevVisible.current) {
       if (initialData) {
         setName(initialData.name);
         setMemberId(initialData.memberId);
         setTotalPrice(initialData.totalPrice.toString());
         setTotalLessons(initialData.totalLessons.toString());
         setSchedule(initialData.schedule);
+        setUnitType(initialData.unitType || 'lesson');
       } else {
         setName('');
         setMemberId('');
         setTotalPrice('');
         setTotalLessons('');
         setSchedule('');
+        setUnitType('lesson');
       }
       setErrors({});
     }
+    prevVisible.current = visible;
   }, [visible, initialData]);
 
   const handleAdd = () => {
@@ -63,11 +68,13 @@ export default function AddClassModal({ visible, onClose, onAdd, members, initia
     const lessonsNum = parseInt(totalLessons, 10) || 0;
 
     onAdd({
+      ...(initialData?.id ? { id: initialData.id } : {}),
       name: name.trim(),
       memberId,
       totalPrice: priceNum,
       totalLessons: lessonsNum,
       schedule: schedule.trim(),
+      unitType,
     });
   };
 
@@ -79,10 +86,11 @@ export default function AddClassModal({ visible, onClose, onAdd, members, initia
           style={styles.modalContainer}
         >
           <View style={styles.modalContent}>
-            <Text style={styles.title}>
-              {initialData ? t.editCourseTitle : t.addCourse}
-            </Text>
-              
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.title}>
+                {initialData ? t.editCourseTitle : t.addCourse}
+              </Text>
+                
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>{t.courseName || 'Course Name'} *</Text>
                 <TextInput
@@ -123,6 +131,28 @@ export default function AddClassModal({ visible, onClose, onAdd, members, initia
                   })}
                 </ScrollView>
                 {errors.memberId ? <Text style={styles.errorText}>{errors.memberId}</Text> : null}
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>{t.unitLabel || 'Unit Type'}</Text>
+                <View style={styles.unitSelector}>
+                  <TouchableOpacity 
+                    style={[styles.unitButton, unitType === 'lesson' && styles.unitButtonActive]}
+                    onPress={() => setUnitType('lesson')}
+                  >
+                    <Text style={[styles.unitButtonText, unitType === 'lesson' && styles.unitButtonTextActive]}>
+                      {t.unitLesson}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.unitButton, unitType === 'session' && styles.unitButtonActive]}
+                    onPress={() => setUnitType('session')}
+                  >
+                    <Text style={[styles.unitButtonText, unitType === 'session' && styles.unitButtonTextActive]}>
+                      {t.unitSession}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <View style={styles.row}>
@@ -171,9 +201,10 @@ export default function AddClassModal({ visible, onClose, onAdd, members, initia
                   </Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          </KeyboardAvoidingView>
-        </View>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
@@ -199,6 +230,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
+    maxHeight: '90%',
   },
   title: {
     fontSize: 20,
@@ -260,6 +292,34 @@ const styles = StyleSheet.create({
   },
   memberTabTextActive: {
     color: '#FFFFFF',
+  },
+  unitSelector: {
+    flexDirection: 'row',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+    padding: 4,
+  },
+  unitButton: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 6,
+  },
+  unitButtonActive: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  unitButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  unitButtonTextActive: {
+    color: '#3b82f6',
   },
   actions: {
     flexDirection: 'row',
