@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -13,48 +13,67 @@ interface SwipeableItemProps {
 
 const SwipeableItem: React.FC<SwipeableItemProps> = ({ children, onEdit, onDelete }) => {
   const { t } = useLanguage();
+  const swipeableRef = useRef<Swipeable>(null);
 
-  const renderRightActions = (
-    progress: Animated.AnimatedInterpolation<number>,
-    dragX: Animated.AnimatedInterpolation<number>
-  ) => {
-    const trans = dragX.interpolate({
-      inputRange: [-160, 0],
-      outputRange: [0, 160],
-    });
-
-    return (
-      <View style={styles.rightActionsContainer}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.editButton]}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            onEdit();
-          }}
-        >
-          <MaterialCommunityIcons name="pencil" size={24} color="#FFF" />
-          <Text style={styles.actionText}>{t.edit}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.deleteButton]}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            onDelete();
-          }}
-        >
-          <MaterialCommunityIcons name="trash-can" size={24} color="#FFF" />
-          <Text style={styles.actionText}>{t.delete}</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  };
-
-  const onSwipeableWillOpen = () => {
+  const handleEdit = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
+    swipeableRef.current?.close();
+    onEdit();
+  }, [onEdit]);
+
+  const handleDelete = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    swipeableRef.current?.close();
+    onDelete();
+  }, [onDelete]);
+
+  const renderRightActions = useCallback(
+    (
+      _progress: Animated.AnimatedInterpolation<number>,
+      dragX: Animated.AnimatedInterpolation<number>
+    ) => {
+      const trans = dragX.interpolate({
+        inputRange: [-160, 0],
+        outputRange: [0, 160],
+      });
+
+      return (
+        <View style={styles.rightActionsContainer}>
+          <Animated.View style={{ flex: 1, transform: [{ translateX: trans }] }}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.editButton]}
+              onPress={handleEdit}
+              accessibilityRole="button"
+              accessibilityLabel={t.edit}
+            >
+              <MaterialCommunityIcons name="pencil" size={24} color="#FFF" />
+              <Text style={styles.actionText}>{t.edit}</Text>
+            </TouchableOpacity>
+          </Animated.View>
+          <Animated.View style={{ flex: 1, transform: [{ translateX: trans }] }}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.deleteButton]}
+              onPress={handleDelete}
+              accessibilityRole="button"
+              accessibilityLabel={t.delete}
+            >
+              <MaterialCommunityIcons name="trash-can" size={24} color="#FFF" />
+              <Text style={styles.actionText}>{t.delete}</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      );
+    },
+    [handleEdit, handleDelete, t.edit, t.delete]
+  );
+
+  const onSwipeableWillOpen = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
 
   return (
     <Swipeable
+      ref={swipeableRef}
       renderRightActions={renderRightActions}
       onSwipeableWillOpen={onSwipeableWillOpen}
       friction={2}
