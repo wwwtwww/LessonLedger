@@ -11,16 +11,17 @@ import {
   Platform,
 } from 'react-native';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Member } from '../types';
+import { Member, ClassItem } from '../types';
 
 interface AddClassModalProps {
   visible: boolean;
   onClose: () => void;
   onAdd: (classItem: { name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: string }) => void;
   members: Member[];
+  initialData?: ClassItem | null;
 }
 
-export default function AddClassModal({ visible, onClose, onAdd, members }: AddClassModalProps) {
+export default function AddClassModal({ visible, onClose, onAdd, members, initialData }: AddClassModalProps) {
   const { t } = useLanguage();
   const [name, setName] = useState('');
   const [memberId, setMemberId] = useState('');
@@ -31,14 +32,22 @@ export default function AddClassModal({ visible, onClose, onAdd, members }: AddC
 
   useEffect(() => {
     if (visible) {
-      setName('');
-      setMemberId('');
-      setTotalPrice('');
-      setTotalLessons('');
-      setSchedule('');
+      if (initialData) {
+        setName(initialData.name);
+        setMemberId(initialData.memberId);
+        setTotalPrice(initialData.totalPrice.toString());
+        setTotalLessons(initialData.totalLessons.toString());
+        setSchedule(initialData.schedule);
+      } else {
+        setName('');
+        setMemberId('');
+        setTotalPrice('');
+        setTotalLessons('');
+        setSchedule('');
+      }
       setErrors({});
     }
-  }, [visible]);
+  }, [visible, initialData]);
 
   const handleAdd = () => {
     const newErrors: { name?: string; memberId?: string } = {};
@@ -70,7 +79,9 @@ export default function AddClassModal({ visible, onClose, onAdd, members }: AddC
           style={styles.modalContainer}
         >
           <View style={styles.modalContent}>
-            <Text style={styles.title}>{t.addCourse || 'Add Course'}</Text>
+            <Text style={styles.title}>
+              {initialData ? t.editCourseTitle : t.addCourse}
+            </Text>
               
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>{t.courseName || 'Course Name'} *</Text>
@@ -155,7 +166,9 @@ export default function AddClassModal({ visible, onClose, onAdd, members }: AddC
                   <Text style={styles.cancelButtonText}>{t.cancel || 'Cancel'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.button, styles.addButton]} onPress={handleAdd}>
-                  <Text style={styles.addButtonText}>{t.add || 'Add'}</Text>
+                  <Text style={styles.addButtonText}>
+                    {initialData ? t.save : t.add}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>

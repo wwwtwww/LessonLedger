@@ -10,31 +10,39 @@ import {
   Platform,
 } from 'react-native';
 import { useLanguage } from '../contexts/LanguageContext';
+import { Member } from '../types';
 
 interface AddMemberModalProps {
   visible: boolean;
   onClose: () => void;
   onAdd: (name: string, icon: string, themeColor: string) => void;
+  initialData?: Member | null;
 }
 
 const PREDEFINED_COLORS = ['#3B82F6', '#EC4899', '#10B981', '#F59E0B', '#8B5CF6'];
 
-export default function AddMemberModal({ visible, onClose, onAdd }: AddMemberModalProps) {
+export default function AddMemberModal({ visible, onClose, onAdd, initialData }: AddMemberModalProps) {
   const { t } = useLanguage();
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('');
   const [themeColor, setThemeColor] = useState(PREDEFINED_COLORS[0]);
   const [error, setError] = useState('');
 
-  // Reset state when modal opens
+  // Reset state when modal opens or initialData changes
   useEffect(() => {
     if (visible) {
-      setName('');
-      setIcon('');
-      setThemeColor(PREDEFINED_COLORS[0]);
+      if (initialData) {
+        setName(initialData.name);
+        setIcon(initialData.icon);
+        setThemeColor(initialData.themeColor);
+      } else {
+        setName('');
+        setIcon('');
+        setThemeColor(PREDEFINED_COLORS[0]);
+      }
       setError('');
     }
-  }, [visible]);
+  }, [visible, initialData]);
 
   const handleAdd = () => {
     if (!name.trim()) {
@@ -54,7 +62,9 @@ export default function AddMemberModal({ visible, onClose, onAdd }: AddMemberMod
           style={styles.modalContainer}
         >
           <View style={styles.modalContent}>
-            <Text style={styles.title}>{t.addMemberTitle || 'Add Member'}</Text>
+            <Text style={styles.title}>
+              {initialData ? t.editMemberTitle : t.addMemberTitle}
+            </Text>
               
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>{t.nameLabel || 'Name'}</Text>
@@ -105,7 +115,9 @@ export default function AddMemberModal({ visible, onClose, onAdd }: AddMemberMod
                   <Text style={styles.cancelButtonText}>{t.cancel || 'Cancel'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.button, styles.addButton]} onPress={handleAdd}>
-                  <Text style={styles.addButtonText}>{t.add || 'Add'}</Text>
+                  <Text style={styles.addButtonText}>
+                    {initialData ? t.save : t.add}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
