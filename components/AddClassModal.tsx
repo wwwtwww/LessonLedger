@@ -7,28 +7,21 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  TouchableWithoutFeedback,
-  Keyboard,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-
-interface Member {
-  id: string;
-  name: string;
-  icon: string;
-  themeColor: string;
-}
+import { useLanguage } from '../contexts/LanguageContext';
+import { Member } from '../types';
 
 interface AddClassModalProps {
   visible: boolean;
   onClose: () => void;
   onAdd: (classItem: { name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: string }) => void;
   members: Member[];
-  t: Record<string, string>;
 }
 
-export default function AddClassModal({ visible, onClose, onAdd, members, t }: AddClassModalProps) {
+export default function AddClassModal({ visible, onClose, onAdd, members }: AddClassModalProps) {
+  const { t } = useLanguage();
   const [name, setName] = useState('');
   const [memberId, setMemberId] = useState('');
   const [totalPrice, setTotalPrice] = useState('');

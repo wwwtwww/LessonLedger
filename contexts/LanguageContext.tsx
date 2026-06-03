@@ -29,13 +29,24 @@ const i18n = {
     noRemainingError: '⚠️ 该项目已无剩余次数/课时！',
     addMember: '新增成员',
     addCourse: '录入新课程',
+    add: '添加',
     name: '姓名',
     icon: '图标(Emoji)',
     color: '主题色',
     courseName: '课程名称',
     cost: '总花费',
     totalHours: '总课时',
-    bindMember: '绑定成员'
+    bindMember: '绑定成员',
+    nameRequired: '名称必填',
+    memberRequired: '请选择成员',
+    courseNamePlaceholder: '例如：钢琴、英语',
+    schedulePlaceholder: '例如：周六 14:00',
+    addMemberTitle: '新增成员',
+    nameLabel: '姓名',
+    namePlaceholder: '输入成员姓名',
+    iconLabel: '图标 (Emoji)',
+    iconPlaceholder: '👤',
+    themeColorLabel: '主题色'
   },
   'en-US': {
     title: '🎒 LessonLedger',
@@ -64,13 +75,24 @@ const i18n = {
     noRemainingError: '⚠️ No remaining sessions left!',
     addMember: 'Add Member',
     addCourse: 'Add Course',
+    add: 'Add',
     name: 'Name',
     icon: 'Icon (Emoji)',
     color: 'Theme Color',
     courseName: 'Course Name',
     cost: 'Total Cost',
     totalHours: 'Total Hours',
-    bindMember: 'Bind Member'
+    bindMember: 'Bind Member',
+    nameRequired: 'Name is required',
+    memberRequired: 'Please select a member',
+    courseNamePlaceholder: 'e.g. Piano, English',
+    schedulePlaceholder: 'e.g. Sat 14:00',
+    addMemberTitle: 'Add Member',
+    nameLabel: 'Name',
+    namePlaceholder: 'Enter member name',
+    iconLabel: 'Icon (Emoji)',
+    iconPlaceholder: '👤',
+    themeColorLabel: 'Theme Color'
   }
 };
 

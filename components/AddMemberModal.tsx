@@ -6,22 +6,21 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  TouchableWithoutFeedback,
-  Keyboard,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface AddMemberModalProps {
   visible: boolean;
   onClose: () => void;
   onAdd: (name: string, icon: string, themeColor: string) => void;
-  t: Record<string, string>;
 }
 
 const PREDEFINED_COLORS = ['#3B82F6', '#EC4899', '#10B981', '#F59E0B', '#8B5CF6'];
 
-export default function AddMemberModal({ visible, onClose, onAdd, t }: AddMemberModalProps) {
+export default function AddMemberModal({ visible, onClose, onAdd }: AddMemberModalProps) {
+  const { t } = useLanguage();
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('');
   const [themeColor, setThemeColor] = useState(PREDEFINED_COLORS[0]);

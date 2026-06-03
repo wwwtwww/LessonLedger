@@ -1,257 +1,136 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   ScrollView,
   TouchableOpacity,
-  Alert,
-  Platform
 } from 'react-native';
+
+// UI Components
+import SummaryCard from '../components/ui/SummaryCard';
+import MemberTabs from '../components/ui/MemberTabs';
+import ClassCard from '../components/ui/ClassCard';
+import LogList from '../components/ui/LogList';
+
+// Modals
 import AddMemberModal from '../components/AddMemberModal';
 import AddClassModal from '../components/AddClassModal';
+
+// Hooks & Contexts
 import { useLanguage } from '../contexts/LanguageContext';
-import { Member, ClassItem, LogItem } from '../types';
+import { useMembers } from '../hooks/useMembers';
+import { useClasses } from '../hooks/useClasses';
 
 export default function App() {
-  // 语言状态管理
   const { lang, setLang, t } = useLanguage();
-
-  // 成员状态管理（支持儿童与成人）
-  const [members, setMembers] = useState<Member[]>([
-    { id: 'm1', name: lang === 'zh-CN' ? '哥哥' : 'Brother', icon: '👦', themeColor: '#3B82F6' },
-    { id: 'm2', name: lang === 'zh-CN' ? '妹妹' : 'Sister', icon: '👧', themeColor: '#EC4899' },
-    { id: 'm3', name: lang === 'zh-CN' ? '妈妈' : 'Mom', icon: '🏋️', themeColor: '#10B981' },
-  ]);
-  const [currentMemberId, setCurrentMemberId] = useState<string>('all');
+  const { 
+    members, 
+    currentMemberId, 
+    setCurrentMemberId, 
+    handleAddMember 
+  } = useMembers();
+  
+  const { 
+    classes, 
+    logs, 
+    stats, 
+    handleCheckIn, 
+    handleAddClass 
+  } = useClasses();
 
   const [isAddMemberVisible, setIsAddMemberVisible] = useState(false);
   const [isAddClassVisible, setIsAddClassVisible] = useState(false);
 
-  const handleAddMember = (name: string, icon: string, themeColor: string) => {
-    setMembers([...members, { id: 'm' + Date.now(), name, icon, themeColor }]);
+  // Filter logic
+  const filteredClasses = useMemo(() => {
+    return currentMemberId === 'all' 
+      ? classes 
+      : classes.filter(c => c.memberId === currentMemberId);
+  }, [classes, currentMemberId]);
+
+  const onAddMember = (name: string, icon: string, themeColor: string) => {
+    handleAddMember(name, icon, themeColor);
     setIsAddMemberVisible(false);
   };
 
-  const handleAddClass = (classItem: { name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: string }) => {
-    setClasses([...classes, {
-      ...classItem,
-      id: 'c' + Date.now(),
-      doneLessons: 0,
-      unitType: 'lesson'
-    }]);
+  const onAddClass = (classItem: { name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: string }) => {
+    handleAddClass(classItem);
     setIsAddClassVisible(false);
-  };
-
-  // 核心课程数据
-  const [classes, setClasses] = useState<ClassItem[]>([
-    { id: 'c1', memberId: 'm1', name: lang === 'zh-CN' ? '钢琴' : 'Piano', totalPrice: 5000, totalLessons: 22, doneLessons: 10, schedule: '周一晚 18:00', unitType: 'lesson' },
-    { id: 'c2', memberId: 'm2', name: lang === 'zh-CN' ? '美术' : 'Art', totalPrice: 2000, totalLessons: 20, doneLessons: 3, schedule: '周三六 14:00', unitType: 'lesson' },
-    { id: 'c3', memberId: 'm3', name: lang === 'zh-CN' ? '私教健身' : 'Fitness Gym', totalPrice: 3000, totalLessons: 10, doneLessons: 8, schedule: '周五晚 19:30', unitType: 'session' },
-  ]);
-
-  const [logs, setLogs] = useState<LogItem[]>([]);
-
-  // 动态全局资产聚合计算
-  const totalSpent = classes.reduce((sum, item) => sum + item.totalPrice, 0);
-  const totalClasses = classes.length;
-  const totalRemaining = classes.reduce((sum, item) => sum + (item.totalLessons - item.doneLessons), 0);
-
-  // 过滤当前选中的成员项目
-  const filteredClasses = currentMemberId === 'all' 
-    ? classes 
-    : classes.filter(c => c.memberId === currentMemberId);
-
-  // 一键对账打卡消课系统
-  const handleCheckIn = (classId: string, className: string, memberName: string) => {
-    const performAction = () => {
-      setClasses(prevClasses => 
-        prevClasses.map(item => {
-          if (item.id === classId) {
-            if (item.doneLessons >= item.totalLessons) {
-              if (Platform.OS === 'web') alert(t.noRemainingError);
-              else Alert.alert('', t.noRemainingError);
-              return item;
-            }
-
-            // 生成带精确时间的不可篡改凭证日志
-            const now = new Date();
-            const timeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-            const logMessage = `[${memberName}] ${className} -> -1 ${item.unitType === 'lesson' ? t.unitLesson : t.unitSession}`;
-            
-            setLogs(prevLogs => [{ id: Date.now().toString(), time: timeStr, text: logMessage }, ...prevLogs]);
-            return { ...item, doneLessons: item.doneLessons + 1 };
-          }
-          return item;
-        })
-      );
-    };
-
-    // 防误触双重确认
-    const msg = t.confirmMsg.replace('{member}', memberName).replace('{course}', className);
-    if (Platform.OS === 'web') {
-      if (window.confirm(msg)) performAction();
-    } else {
-      Alert.alert(t.confirmTitle, msg, [
-        { text: t.cancel, style: 'cancel' },
-        { text: t.confirm, onPress: performAction }
-      ]);
-    }
   };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* 顶部多语言一键切换栏 */}
+      {/* Language Switcher */}
       <View style={styles.langHeader}>
         <TouchableOpacity style={styles.langBtn} onPress={() => setLang(lang === 'zh-CN' ? 'en-US' : 'zh-CN')}>
           <Text style={styles.langBtnText}>🌐 {t.switchLang}</Text>
         </TouchableOpacity>
       </View>
 
-      {/* 标题 */}
+      {/* Header */}
       <Text style={styles.appTitle}>{t.title}</Text>
       <Text style={styles.appSubTitle}>{t.subTitle}</Text>
 
-      {/* 2. 多成员全资产大局看板 */}
-      <View style={styles.summaryCard}>
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryNum}>{lang === 'zh-CN' ? '￥' : '$'}{totalSpent}</Text>
-          <Text style={styles.summaryLabel}>{t.totalInvestment}</Text>
-        </View>
-        <View style={[styles.summaryItem, styles.summaryBorder]}>
-          <Text style={styles.summaryNum}>{totalClasses}</Text>
-          <Text style={styles.summaryLabel}>{t.activeProjects}</Text>
-        </View>
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryNum}>{totalRemaining}</Text>
-          <Text style={styles.summaryLabel}>{t.totalRemaining}</Text>
-        </View>
-      </View>
+      {/* Summary Dashboard */}
+      <SummaryCard stats={stats} />
 
-      {/* 3. 全人群成员切换沙盒 */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.memberSelectorRow}>
-        <TouchableOpacity 
-          style={[styles.memberTab, currentMemberId === 'all' && styles.memberTabActiveAll]} 
-          onPress={() => setCurrentMemberId('all')}
-        >
-          <Text style={[styles.memberTabText, currentMemberId === 'all' && styles.memberTabTextActive]}>{t.allMembers}</Text>
-        </TouchableOpacity>
-        {members.map(m => {
-          const isSelected = currentMemberId === m.id;
-          return (
-            <TouchableOpacity 
-              key={m.id} 
-              style={[styles.memberTab, isSelected && { backgroundColor: m.themeColor, borderColor: 'transparent' }]} 
-              onPress={() => setCurrentMemberId(m.id)}
-            >
-              <Text style={[styles.memberTabText, isSelected && styles.memberTabTextActive]}>{m.icon} {m.name}</Text>
-            </TouchableOpacity>
-          );
-        })}
-        <TouchableOpacity 
-          style={[styles.memberTab, styles.addMemberTab]} 
-          onPress={() => setIsAddMemberVisible(true)}
-        >
-          <Text style={styles.addMemberTabText}>+ {t.addMember}</Text>
-        </TouchableOpacity>
-      </ScrollView>
+      {/* Member Selection */}
+      <MemberTabs 
+        members={members}
+        currentMemberId={currentMemberId}
+        onSelectMember={setCurrentMemberId}
+        onAddMemberPress={() => setIsAddMemberVisible(true)}
+      />
 
+      {/* Add Course Button */}
       <TouchableOpacity style={styles.addCourseBtn} onPress={() => setIsAddClassVisible(true)}>
         <Text style={styles.addCourseBtnText}>+ {t.addCourse}</Text>
       </TouchableOpacity>
 
-      {/* 4. 智能动态项目卡片流 */}
+      {/* Class List */}
       <View style={styles.listSection}>
         {filteredClasses.length === 0 ? (
           <Text style={styles.emptyText}>{t.noData}</Text>
         ) : (
           filteredClasses.map(item => {
             const owner = members.find(m => m.id === item.memberId);
-            const remaining = item.totalLessons - item.doneLessons;
-            const progress = (item.doneLessons / item.totalLessons) * 100;
-            const costPerUnit = (item.totalPrice / item.totalLessons).toFixed(1);
-            const unitLabel = item.unitType === 'lesson' ? t.unitLesson : t.unitSession;
-
-            // 低余额红灯预警判定 (剩余 <= 3 亮猩红灯)
-            const isWarning = remaining <= 3 && remaining > 0;
-            const isDone = remaining === 0;
-
             return (
-              <View key={item.id} style={[styles.classCard, isWarning && styles.classCardWarning]}>
-                <View style={styles.cardHeader}>
-                  <View style={styles.titleGroup}>
-                    <Text style={styles.className}>{item.name}</Text>
-                    <Text style={[styles.memberBadge, { backgroundColor: owner?.themeColor + '20', color: owner?.themeColor }]}>
-                      {owner?.icon} {owner?.name}
-                    </Text>
-                  </View>
-                  <Text style={styles.classCost}>{lang === 'zh-CN' ? '￥' : '$'}{costPerUnit} / {unitLabel}</Text>
-                </View>
-
-                <Text style={styles.classTime}>🕒 {t.schedule}: {item.schedule}</Text>
-
-                <View style={styles.lessonInfoRow}>
-                  <Text style={styles.lessonText}>
-                    {t.alreadyUp} <Text style={styles.boldText}>{item.doneLessons}</Text> / {t.total} {item.totalLessons}
-                  </Text>
-                  <Text style={styles.lessonText}>
-                    {t.remain} <Text style={[styles.boldText, isWarning && styles.warningText]}>{remaining}</Text> {unitLabel}
-                  </Text>
-                </View>
-
-                {/* 进度条 */}
-                <View style={styles.progressBarBg}>
-                  <View style={[styles.progressBarFill, { width: `${progress}%` }, isWarning && { backgroundColor: '#EF4444' }]} />
-                </View>
-
-                {/* 打卡按钮 */}
-                <TouchableOpacity 
-                  style={[styles.checkInBtn, { backgroundColor: owner?.themeColor }, isDone && styles.disabledBtn]} 
-                  onPress={() => handleCheckIn(item.id, item.name, owner?.name || '')}
-                  disabled={isDone}
-                >
-                  <Text style={styles.checkInBtnText}>{isDone ? t.btnCompleted : t.btnCheckIn}</Text>
-                </TouchableOpacity>
-              </View>
+              <ClassCard 
+                key={item.id}
+                classItem={item}
+                owner={owner}
+                onCheckIn={handleCheckIn}
+              />
             );
           })
         )}
       </View>
 
-      {/* 5. 年月日精密对账日志区 */}
-      <Text style={styles.sectionTitle}>{t.historyLog}</Text>
-      <View style={styles.logContainer}>
-        {logs.length === 0 ? (
-          <Text style={styles.emptyLogText}>{t.noLog}</Text>
-        ) : (
-          logs.map(log => (
-            <View key={log.id} style={styles.logTextRow}>
-              <Text style={styles.logTime}>{log.time}</Text>
-              <Text style={styles.logText}>✅ {log.text}</Text>
-            </View>
-          ))
-        )}
-      </View>
+      {/* History Logs */}
+      <LogList logs={logs} />
 
+      {/* Modals */}
       <AddMemberModal
         visible={isAddMemberVisible}
         onClose={() => setIsAddMemberVisible(false)}
-        onAdd={handleAddMember}
-        t={t}
+        onAdd={onAddMember}
       />
       <AddClassModal
         visible={isAddClassVisible}
         onClose={() => setIsAddClassVisible(false)}
-        onAdd={handleAddClass}
+        onAdd={onAddClass}
         members={members}
-        t={t}
       />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#F8FAFC' 
+  },
   contentContainer: { 
     padding: 20, 
     paddingBottom: 50,
@@ -259,48 +138,58 @@ const styles = StyleSheet.create({
     width: '100%',             
     marginHorizontal: 'auto'   
   },
-  langHeader: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 5 },
-  langBtn: { backgroundColor: '#FFFFFF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#E2E8F0' },
-  langBtnText: { fontSize: 12, fontWeight: '600', color: '#475569' },
-  appTitle: { fontSize: 26, fontWeight: '900', color: '#0F172A', textAlign: 'center', marginTop: 5 },
-  appSubTitle: { fontSize: 12, fontWeight: '600', color: '#94A3B8', textAlign: 'center', marginBottom: 20, textTransform: 'uppercase', letterSpacing: 1 },
-  summaryCard: { backgroundColor: '#1E293B', borderRadius: 20, padding: 20, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
-  summaryItem: { flex: 1, alignItems: 'center' },
-  summaryBorder: { borderLeftWidth: 1, borderRightWidth: 1, borderColor: 'rgba(255, 255, 255, 0.15)' },
-  summaryNum: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 4 },
-  summaryLabel: { fontSize: 11, color: '#94A3B8' },
-  memberSelectorRow: { flexDirection: 'row', marginBottom: 15, paddingBottom: 5 },
-  memberTab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', marginRight: 8, height: 38 },
-  memberTabActiveAll: { backgroundColor: '#0F172A', borderColor: 'transparent' },
-  memberTabText: { fontSize: 13, fontWeight: '700', color: '#64748B' },
-  memberTabTextActive: { color: '#FFFFFF' },
-  addMemberTab: { borderStyle: 'dashed', backgroundColor: 'transparent' },
-  addMemberTabText: { fontSize: 13, fontWeight: '700', color: '#64748B' },
-  addCourseBtn: { backgroundColor: '#0F172A', borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginBottom: 16 },
-  addCourseBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-  listSection: { marginBottom: 20 },
-  classCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0', shadowColor: '#0F172A', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 4, elevation: 2 },
-  classCardWarning: { borderColor: '#EF4444', shadowColor: '#EF4444', shadowOpacity: 0.08 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  titleGroup: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  className: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
-  memberBadge: { fontSize: 11, fontWeight: '700', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, overflow: 'hidden' },
-  classCost: { fontSize: 13, fontWeight: '600', color: '#64748B' },
-  classTime: { fontSize: 13, color: '#64748B', marginBottom: 12 },
-  lessonInfoRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  lessonText: { fontSize: 13, color: '#475569' },
-  boldText: { fontWeight: 'bold', color: '#0F172A' },
-  warningText: { color: '#EF4444', fontWeight: '900' },
-  progressBarBg: { height: 6, backgroundColor: '#E2E8F0', borderRadius: 3, marginBottom: 14, overflow: 'hidden' },
-  progressBarFill: { height: '100%', backgroundColor: '#10B981', borderRadius: 3 },
-  checkInBtn: { borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
-  disabledBtn: { backgroundColor: '#CBD5E1' },
-  checkInBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#334155', marginBottom: 10 },
-  logContainer: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: '#E2E8F0' },
-  emptyText: { textAlign: 'center', color: '#94A3B8', padding: 20 },
-  emptyLogText: { color: '#94A3B8', textAlign: 'center', fontSize: 12, paddingVertical: 10 },
-  logTextRow: { borderBottomWidth: 1, borderBottomColor: '#F1F5F9', paddingVertical: 8, flexDirection: 'row', justifyContent: 'space-between' },
-  logTime: { fontSize: 11, color: '#94A3B8', width: 110 },
-  logText: { fontSize: 13, fontWeight: '600', color: '#334155', flex: 1 }
+  langHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'flex-end', 
+    marginBottom: 5 
+  },
+  langBtn: { 
+    backgroundColor: '#FFFFFF', 
+    paddingHorizontal: 12, 
+    paddingVertical: 6, 
+    borderRadius: 20, 
+    borderWidth: 1, 
+    borderColor: '#E2E8F0' 
+  },
+  langBtnText: { 
+    fontSize: 12, 
+    fontWeight: '600', 
+    color: '#475569' 
+  },
+  appTitle: { 
+    fontSize: 26, 
+    fontWeight: '900', 
+    color: '#0F172A', 
+    textAlign: 'center', 
+    marginTop: 5 
+  },
+  appSubTitle: { 
+    fontSize: 12, 
+    fontWeight: '600', 
+    color: '#94A3B8', 
+    textAlign: 'center', 
+    marginBottom: 20, 
+    textTransform: 'uppercase', 
+    letterSpacing: 1 
+  },
+  addCourseBtn: { 
+    backgroundColor: '#0F172A', 
+    borderRadius: 12, 
+    paddingVertical: 12, 
+    alignItems: 'center', 
+    marginBottom: 16 
+  },
+  addCourseBtnText: { 
+    color: '#FFFFFF', 
+    fontSize: 14, 
+    fontWeight: '700' 
+  },
+  listSection: { 
+    marginBottom: 20 
+  },
+  emptyText: { 
+    textAlign: 'center', 
+    color: '#94A3B8', 
+    padding: 20 
+  },
 });
