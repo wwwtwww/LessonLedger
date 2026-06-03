@@ -49,14 +49,13 @@ export default function AddMemberModal({ visible, onClose, onAdd, t }: AddMember
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.overlay}>
-          <KeyboardAvoidingView 
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.modalContainer}
-          >
-            <View style={styles.modalContent}>
-              <Text style={styles.title}>{t.addMemberTitle || 'Add Member'}</Text>
+      <View style={styles.overlay}>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalContainer}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.title}>{t.addMemberTitle || 'Add Member'}</Text>
               
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>{t.nameLabel || 'Name'}</Text>
@@ -113,7 +112,6 @@ export default function AddMemberModal({ visible, onClose, onAdd, t }: AddMember
             </View>
           </KeyboardAvoidingView>
         </View>
-      </TouchableWithoutFeedback>
     </Modal>
   );
 }

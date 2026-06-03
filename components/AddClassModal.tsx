@@ -71,14 +71,13 @@ export default function AddClassModal({ visible, onClose, onAdd, members, t }: A
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.overlay}>
-          <KeyboardAvoidingView 
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.modalContainer}
-          >
-            <View style={styles.modalContent}>
-              <Text style={styles.title}>{t.addCourse || 'Add Course'}</Text>
+      <View style={styles.overlay}>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalContainer}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.title}>{t.addCourse || 'Add Course'}</Text>
               
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>{t.courseName || 'Course Name'} *</Text>
@@ -169,7 +168,6 @@ export default function AddClassModal({ visible, onClose, onAdd, members, t }: A
             </View>
           </KeyboardAvoidingView>
         </View>
-      </TouchableWithoutFeedback>
     </Modal>
   );
 }
