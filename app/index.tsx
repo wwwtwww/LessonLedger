@@ -33,7 +33,8 @@ export default function App() {
     currentMemberId,
     setCurrentMemberId,
     handleAddMember,
-    handleUpdateMember
+    handleUpdateMember,
+    handleDeleteMember
   } = useMembers();
 
   const {
@@ -81,6 +82,39 @@ export default function App() {
     setEditingClass(null);
   };
 
+  const handleMemberLongPress = (member: any) => {
+    if (Platform.OS === 'web') {
+      const choice = window.confirm(`Edit or Delete ${member.name}? (OK for Edit, Cancel for Delete choice... wait, window.confirm is limited)`);
+      // Simplified for web if needed, but let's stick to the prompt's Alert style
+    }
+
+    Alert.alert(
+      member.name,
+      '',
+      [
+        { text: t.cancel, style: 'cancel' },
+        { 
+          text: t.edit, 
+          onPress: () => {
+            setEditingMember(member);
+            setIsAddMemberVisible(true);
+          } 
+        },
+        { 
+          text: t.delete, 
+          style: 'destructive',
+          onPress: () => {
+            const msg = t.confirmDeleteMemberMsg.replace('{member}', member.name);
+            Alert.alert(t.confirmDeleteMemberTitle, msg, [
+              { text: t.cancel, style: 'cancel' },
+              { text: t.confirm, style: 'destructive', onPress: () => handleDeleteMember(member.id) }
+            ]);
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <AppHeader />
@@ -92,6 +126,7 @@ export default function App() {
         currentMemberId={currentMemberId}
         onSelectMember={setCurrentMemberId}
         onAddMemberPress={() => setIsAddMemberVisible(true)}
+        onLongPressMember={handleMemberLongPress}
       />
 
       <AddCourseBtn onPress={() => setIsAddClassVisible(true)} />

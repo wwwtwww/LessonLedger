@@ -54,7 +54,9 @@ const i18n = {
     iconLabel: '图标 (Emoji)',
     iconPlaceholder: '👤',
     themeColorLabel: '主题色',
-    unitLabel: '单位类型'
+    unitLabel: '单位类型',
+    confirmDeleteMemberTitle: '确认删除成员',
+    confirmDeleteMemberMsg: '确定要删除成员【{member}】吗？这将同时在列表中隐藏该成员的所有课程。'
   },
   'en-US': {
     title: '🎒 LessonLedger',
@@ -108,7 +110,9 @@ const i18n = {
     iconLabel: 'Icon (Emoji)',
     iconPlaceholder: '👤',
     themeColorLabel: 'Theme Color',
-    unitLabel: 'Unit Type'
+    unitLabel: 'Unit Type',
+    confirmDeleteMemberTitle: 'Confirm Delete Member',
+    confirmDeleteMemberMsg: 'Are you sure you want to delete member [{member}]? This will also hide all their courses from the list.'
   }
 };
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, ScrollView, TouchableOpacity } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Member } from '../../types';
 
@@ -8,6 +9,7 @@ interface MemberTabsProps {
   currentMemberId: string;
   onSelectMember: (id: string) => void;
   onAddMemberPress: () => void;
+  onLongPressMember?: (member: Member) => void;
 }
 
 const MemberTabs: React.FC<MemberTabsProps> = ({
@@ -15,6 +17,7 @@ const MemberTabs: React.FC<MemberTabsProps> = ({
   currentMemberId,
   onSelectMember,
   onAddMemberPress,
+  onLongPressMember,
 }) => {
   const { t } = useLanguage();
 
@@ -39,6 +42,10 @@ const MemberTabs: React.FC<MemberTabsProps> = ({
             key={m.id} 
             style={[styles.memberTab, isSelected && { backgroundColor: m.themeColor, borderColor: 'transparent' }]} 
             onPress={() => onSelectMember(m.id)}
+            onLongPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              onLongPressMember?.(m);
+            }}
           >
             <Text style={[styles.memberTabText, isSelected && styles.memberTabTextActive]}>
               {m.icon} {m.name}
