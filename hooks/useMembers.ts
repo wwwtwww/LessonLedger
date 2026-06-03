@@ -25,7 +25,7 @@ export function useMembers() {
   const visibleMembers = useMemo(() => allMembers.filter(m => !m.isDeleted), [allMembers]);
 
   const handleAddMember = useCallback((name: string, icon: string, themeColor: string) => {
-    setAllMembers(prev => [...prev, { id: 'm' + Date.now(), name, icon, themeColor }]);
+    setAllMembers(prev => [...prev, { id: 'm' + Date.now(), name, icon, themeColor, isDeleted: false }]);
   }, []);
 
   const handleUpdateMember = useCallback((id: string, data: Partial<Member>) => {

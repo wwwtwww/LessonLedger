@@ -31,8 +31,8 @@ export function useClasses(currentMemberId: string, members: Member[]) {
     }, {} as Record<string, Member>);
 
     const list = currentMemberId === 'all'
-      ? classes.filter(c => !c.isDeleted)
-      : classes.filter(c => c.memberId === currentMemberId && !c.isDeleted);
+      ? classes.filter(c => !c.isDeleted && !!memberMap[c.memberId])
+      : classes.filter(c => c.memberId === currentMemberId && !c.isDeleted && !!memberMap[c.memberId]);
 
     return list.map(c => ({
       ...c,
@@ -58,12 +58,13 @@ export function useClasses(currentMemberId: string, members: Member[]) {
   }, []);
 
   const stats = useMemo(() => {
-    const activeClasses = classes.filter(c => !c.isDeleted);
+    const memberIds = new Set(members.map(m => m.id));
+    const activeClasses = classes.filter(c => !c.isDeleted && memberIds.has(c.memberId));
     const totalSpent = activeClasses.reduce((sum, item) => sum + item.totalPrice, 0);
     const totalClasses = activeClasses.length;
     const totalRemaining = activeClasses.reduce((sum, item) => sum + (item.totalLessons - item.doneLessons), 0);
     return { totalSpent, totalClasses, totalRemaining };
-  }, [classes]);
+  }, [classes, members]);
 
   const handleCheckIn = useCallback((classId: string, className: string, memberName: string) => {
     const performAction = () => {
