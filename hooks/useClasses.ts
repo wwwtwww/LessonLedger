@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Platform, Alert } from 'react-native';
 import { ClassItem, LogItem } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -12,42 +12,50 @@ export function useClasses() {
     { id: 'c3', memberId: 'm3', name: lang === 'zh-CN' ? '私教健身' : 'Fitness Gym', totalPrice: 3000, totalLessons: 10, doneLessons: 8, schedule: '周五晚 19:30', unitType: 'session' },
   ]);
 
+  useEffect(() => {
+    setClasses(prev => prev.map(item => {
+      if (item.id === 'c1') return { ...item, name: lang === 'zh-CN' ? '钢琴' : 'Piano' };
+      if (item.id === 'c2') return { ...item, name: lang === 'zh-CN' ? '美术' : 'Art' };
+      if (item.id === 'c3') return { ...item, name: lang === 'zh-CN' ? '私教健身' : 'Fitness Gym' };
+      return item;
+    }));
+  }, [lang]);
+
   const [logs, setLogs] = useState<LogItem[]>([]);
 
-  const handleAddClass = (classItem: { name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: string }) => {
-    setClasses([...classes, {
+  const handleAddClass = useCallback((classItem: { name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: string }) => {
+    setClasses(prev => [...prev, {
       ...classItem,
       id: 'c' + Date.now(),
       doneLessons: 0,
       unitType: 'lesson'
     }]);
-  };
+  }, []);
 
-  const totalSpent = classes.reduce((sum, item) => sum + item.totalPrice, 0);
-  const totalClasses = classes.length;
-  const totalRemaining = classes.reduce((sum, item) => sum + (item.totalLessons - item.doneLessons), 0);
+  const stats = useMemo(() => {
+    const totalSpent = classes.reduce((sum, item) => sum + item.totalPrice, 0);
+    const totalClasses = classes.length;
+    const totalRemaining = classes.reduce((sum, item) => sum + (item.totalLessons - item.doneLessons), 0);
+    return { totalSpent, totalClasses, totalRemaining };
+  }, [classes]);
 
-  const handleCheckIn = (classId: string, className: string, memberName: string) => {
+  const handleCheckIn = useCallback((classId: string, className: string, memberName: string) => {
     const performAction = () => {
-      setClasses(prevClasses =>
-        prevClasses.map(item => {
-          if (item.id === classId) {
-            if (item.doneLessons >= item.totalLessons) {
-              if (Platform.OS === 'web') alert(t.noRemainingError);
-              else Alert.alert('', t.noRemainingError);
-              return item;
-            }
+      const item = classes.find(c => c.id === classId);
+      if (!item) return;
 
-            const now = new Date();
-            const timeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-            const logMessage = `[${memberName}] ${className} -> -1 ${item.unitType === 'lesson' ? t.unitLesson : t.unitSession}`;
+      if (item.doneLessons >= item.totalLessons) {
+        if (Platform.OS === 'web') alert(t.noRemainingError);
+        else Alert.alert('', t.noRemainingError);
+        return;
+      }
 
-            setLogs(prevLogs => [{ id: Date.now().toString(), time: timeStr, text: logMessage }, ...prevLogs]);
-            return { ...item, doneLessons: item.doneLessons + 1 };
-          }
-          return item;
-        })
-      );
+      const now = new Date();
+      const timeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const logMessage = `[${memberName}] ${className} -> -1 ${item.unitType === 'lesson' ? t.unitLesson : t.unitSession}`;
+
+      setClasses(prev => prev.map(c => c.id === classId ? { ...c, doneLessons: c.doneLessons + 1 } : c));
+      setLogs(prevLogs => [{ id: Date.now().toString(), time: timeStr, text: logMessage }, ...prevLogs]);
     };
 
     const msg = t.confirmMsg.replace('{member}', memberName).replace('{course}', className);
@@ -59,13 +67,13 @@ export function useClasses() {
         { text: t.confirm, onPress: performAction }
       ]);
     }
-  };
+  }, [classes, t, setClasses, setLogs]);
 
   return { 
     classes, 
     setClasses, 
     logs, 
-    stats: { totalSpent, totalClasses, totalRemaining }, 
+    stats, 
     handleCheckIn, 
     handleAddClass 
   };
