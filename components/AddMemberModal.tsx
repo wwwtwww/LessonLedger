@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal,
   View,
   Text,
   TextInput,
   TouchableOpacity,
+  ScrollView,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
@@ -15,7 +16,7 @@ import { Member } from '../types';
 interface AddMemberModalProps {
   visible: boolean;
   onClose: () => void;
-  onAdd: (name: string, icon: string, themeColor: string) => void;
+  onAdd: (data: Partial<Member> & { name: string; icon: string; themeColor: string }) => void;
   initialData?: Member | null;
 }
 
@@ -27,10 +28,11 @@ export default function AddMemberModal({ visible, onClose, onAdd, initialData }:
   const [icon, setIcon] = useState('');
   const [themeColor, setThemeColor] = useState(PREDEFINED_COLORS[0]);
   const [error, setError] = useState('');
+  const prevVisible = useRef(visible);
 
-  // Reset state when modal opens or initialData changes
+  // Reset state when modal opens
   useEffect(() => {
-    if (visible) {
+    if (visible && !prevVisible.current) {
       if (initialData) {
         setName(initialData.name);
         setIcon(initialData.icon);
@@ -42,6 +44,7 @@ export default function AddMemberModal({ visible, onClose, onAdd, initialData }:
       }
       setError('');
     }
+    prevVisible.current = visible;
   }, [visible, initialData]);
 
   const handleAdd = () => {
@@ -51,7 +54,12 @@ export default function AddMemberModal({ visible, onClose, onAdd, initialData }:
     }
     
     const finalIcon = icon.trim() || '👤';
-    onAdd(name.trim(), finalIcon, themeColor);
+    onAdd({
+      ...(initialData?.id ? { id: initialData.id } : {}),
+      name: name.trim(),
+      icon: finalIcon,
+      themeColor,
+    });
   };
 
   return (
@@ -62,10 +70,11 @@ export default function AddMemberModal({ visible, onClose, onAdd, initialData }:
           style={styles.modalContainer}
         >
           <View style={styles.modalContent}>
-            <Text style={styles.title}>
-              {initialData ? t.editMemberTitle : t.addMemberTitle}
-            </Text>
-              
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.title}>
+                {initialData ? t.editMemberTitle : t.addMemberTitle}
+              </Text>
+                
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>{t.nameLabel || 'Name'}</Text>
                 <TextInput
@@ -120,9 +129,10 @@ export default function AddMemberModal({ visible, onClose, onAdd, initialData }:
                   </Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          </KeyboardAvoidingView>
-        </View>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
