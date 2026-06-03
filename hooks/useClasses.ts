@@ -72,7 +72,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
       // 这里我们直接在 setClasses 的函数式更新中处理，以确保数据的绝对新鲜
       setClasses(prevClasses => {
         const item = prevClasses.find(c => c.id === classId);
-        if (!item) return prevClasses;
+        if (!item || item.isDeleted) return prevClasses;
 
         if (item.doneLessons >= item.totalLessons) {
           if (Platform.OS === 'web') alert(t.noRemainingError);
