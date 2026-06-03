@@ -10,109 +10,12 @@ import {
 } from 'react-native';
 import AddMemberModal from '../components/AddMemberModal';
 import AddClassModal from '../components/AddClassModal';
-
-// 1. 国际化多语言字典库 (i18n)
-const i18n = {
-  'zh-CN': {
-    title: '🎒 时课账本',
-    subTitle: 'LessonLedger Pro',
-    totalInvestment: '累计学费投入',
-    activeProjects: '进行中项目',
-    totalRemaining: '全家剩余总课时',
-    switchLang: 'English',
-    allMembers: '👥 全员总览',
-    unitLesson: '课时',
-    unitSession: '次',
-    costPerLesson: '单次成本',
-    schedule: '上课时间',
-    alreadyUp: '已上',
-    total: '总共',
-    remain: '剩余',
-    btnCheckIn: '✨ 一键打卡消课',
-    btnCompleted: '已结课',
-    noData: '暂无课程数据',
-    noLog: '暂无打卡记录，上完课记得点上面打卡哦~',
-    historyLog: '📝 历史打卡日志',
-    confirmTitle: '确认打卡消课',
-    confirmMsg: '确定要在今天为【{member}】的【{course}】打卡消课 1 次吗？',
-    cancel: '取消',
-    confirm: '确认',
-    noRemainingError: '⚠️ 该项目已无剩余次数/课时！',
-    addMember: '新增成员',
-    addCourse: '录入新课程',
-    name: '姓名',
-    icon: '图标(Emoji)',
-    color: '主题色',
-    courseName: '课程名称',
-    cost: '总花费',
-    totalHours: '总课时',
-    bindMember: '绑定成员'
-  },
-  'en-US': {
-    title: '🎒 LessonLedger',
-    subTitle: 'Lifelong Learning Tracker',
-    totalInvestment: 'Total Investment',
-    activeProjects: 'Active items',
-    totalRemaining: 'Total Remaining',
-    switchLang: '简体中文',
-    allMembers: '👥 All Members',
-    unitLesson: 'Lsn',
-    unitSession: 'Ssn',
-    costPerLesson: 'Per Cost',
-    schedule: 'Schedule',
-    alreadyUp: 'Done',
-    total: 'Total',
-    remain: 'Remains',
-    btnCheckIn: '✨ Check-In',
-    btnCompleted: 'Completed',
-    noData: 'No Data Found',
-    noLog: 'No records found. Tap Check-In to start!',
-    historyLog: '📝 Audit Logs',
-    confirmTitle: 'Confirm Check-In',
-    confirmMsg: "Are you sure you want to Check-In 1 session for [{member}]'s [{course}]?",
-    cancel: 'Cancel',
-    confirm: 'Confirm',
-    noRemainingError: '⚠️ No remaining sessions left!',
-    addMember: 'Add Member',
-    addCourse: 'Add Course',
-    name: 'Name',
-    icon: 'Icon (Emoji)',
-    color: 'Theme Color',
-    courseName: 'Course Name',
-    cost: 'Total Cost',
-    totalHours: 'Total Hours',
-    bindMember: 'Bind Member'
-  }
-};
-
-interface Member {
-  id: string;
-  name: string;
-  icon: string;
-  themeColor: string;
-}
-
-interface ClassItem {
-  id: string;
-  memberId: string;
-  name: string;
-  totalPrice: number;
-  totalLessons: number;
-  doneLessons: number;
-  schedule: string;
-  unitType: 'lesson' | 'session';
-}
-
-interface LogItem {
-  id: string;
-  time: string;
-  text: string;
-}
+import { useLanguage } from '../contexts/LanguageContext';
+import { Member, ClassItem, LogItem } from '../types';
 
 export default function App() {
   // 语言状态管理
-  const [lang, setLang] = useState<'zh-CN' | 'en-US'>('zh-CN');
-  const t = i18n[lang];
+  const { lang, setLang, t } = useLanguage();
 
   // 成员状态管理（支持儿童与成人）
   const [members, setMembers] = useState<Member[]>([
