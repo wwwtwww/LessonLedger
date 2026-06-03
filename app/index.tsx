@@ -22,7 +22,7 @@ const i18n = {
     unitLesson: '课时',
     unitSession: '次',
     costPerLesson: '单次成本',
-    schedule: '时间',
+    schedule: '上课时间',
     alreadyUp: '已上',
     total: '总共',
     remain: '剩余',
@@ -34,8 +34,17 @@ const i18n = {
     confirmTitle: '确认打卡消课',
     confirmMsg: '确定要在今天为【{member}】的【{course}】打卡消课 1 次吗？',
     cancel: '取消',
-    confirm: '确定消课',
-    noRemainingError: '⚠️ 该项目已无剩余次数/课时！'
+    confirm: '确认',
+    noRemainingError: '⚠️ 该项目已无剩余次数/课时！',
+    addMember: '新增成员',
+    addCourse: '录入新课程',
+    name: '姓名',
+    icon: '图标(Emoji)',
+    color: '主题色',
+    courseName: '课程名称',
+    cost: '总花费',
+    totalHours: '总课时',
+    bindMember: '绑定成员'
   },
   'en-US': {
     title: '🎒 LessonLedger',
@@ -61,7 +70,16 @@ const i18n = {
     confirmMsg: "Are you sure you want to Check-In 1 session for [{member}]'s [{course}]?",
     cancel: 'Cancel',
     confirm: 'Confirm',
-    noRemainingError: '⚠️ No remaining sessions left!'
+    noRemainingError: '⚠️ No remaining sessions left!',
+    addMember: 'Add Member',
+    addCourse: 'Add Course',
+    name: 'Name',
+    icon: 'Icon (Emoji)',
+    color: 'Theme Color',
+    courseName: 'Course Name',
+    cost: 'Total Cost',
+    totalHours: 'Total Hours',
+    bindMember: 'Bind Member'
   }
 };
 
