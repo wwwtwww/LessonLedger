@@ -49,7 +49,8 @@ const i18n = {
     namePlaceholder: '输入成员姓名',
     iconLabel: '图标 (Emoji)',
     iconPlaceholder: '👤',
-    themeColorLabel: '主题色'
+    themeColorLabel: '主题色',
+    unitLabel: '单位类型'
   },
   'en-US': {
     title: '🎒 LessonLedger',
@@ -98,7 +99,8 @@ const i18n = {
     namePlaceholder: 'Enter member name',
     iconLabel: 'Icon (Emoji)',
     iconPlaceholder: '👤',
-    themeColorLabel: 'Theme Color'
+    themeColorLabel: 'Theme Color',
+    unitLabel: 'Unit Type'
   }
 };
 
