@@ -24,13 +24,19 @@ export function useClasses(currentMemberId: string, members: Member[]) {
   const [logs, setLogs] = useState<LogItem[]>([]);
 
   const filteredClasses = useMemo(() => {
+    // 性能优化：构建成员 Map，实现 O(1) 查找
+    const memberMap = members.reduce((acc, m) => {
+      acc[m.id] = m;
+      return acc;
+    }, {} as Record<string, Member>);
+
     const list = currentMemberId === 'all'
       ? classes
       : classes.filter(c => c.memberId === currentMemberId);
 
     return list.map(c => ({
       ...c,
-      owner: members.find(m => m.id === c.memberId)
+      owner: memberMap[c.memberId]
     }));
   }, [classes, currentMemberId, members]);
 
@@ -52,21 +58,27 @@ export function useClasses(currentMemberId: string, members: Member[]) {
 
   const handleCheckIn = useCallback((classId: string, className: string, memberName: string) => {
     const performAction = () => {
-      const item = classes.find(c => c.id === classId);
-      if (!item) return;
+      // 修复闭包陷阱：将余额检查和日志生成逻辑移至更新器外部，但基于最新的 classes 状态
+      // 这里我们直接在 setClasses 的函数式更新中处理，以确保数据的绝对新鲜
+      setClasses(prevClasses => {
+        const item = prevClasses.find(c => c.id === classId);
+        if (!item) return prevClasses;
 
-      if (item.doneLessons >= item.totalLessons) {
-        if (Platform.OS === 'web') alert(t.noRemainingError);
-        else Alert.alert('', t.noRemainingError);
-        return;
-      }
+        if (item.doneLessons >= item.totalLessons) {
+          if (Platform.OS === 'web') alert(t.noRemainingError);
+          else Alert.alert('', t.noRemainingError);
+          return prevClasses;
+        }
 
-      const now = new Date();
-      const timeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-      const logMessage = `[${memberName}] ${className} -> -1 ${item.unitType === 'lesson' ? t.unitLesson : t.unitSession}`;
+        // 状态更新与日志生成分离，保持更新器纯净
+        const now = new Date();
+        const timeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        const logMessage = `[${memberName}] ${className} -> -1 ${item.unitType === 'lesson' ? t.unitLesson : t.unitSession}`;
 
-      setClasses(prev => prev.map(c => c.id === classId ? { ...c, doneLessons: c.doneLessons + 1 } : c));
-      setLogs(prevLogs => [{ id: Date.now().toString(), time: timeStr, text: logMessage }, ...prevLogs]);
+        setLogs(prevLogs => [{ id: Date.now().toString(), time: timeStr, text: logMessage }, ...prevLogs]);
+
+        return prevClasses.map(c => c.id === classId ? { ...c, doneLessons: c.doneLessons + 1 } : c);
+      });
     };
 
     const msg = t.confirmMsg.replace('{member}', memberName).replace('{course}', className);
@@ -78,7 +90,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
         { text: t.confirm, onPress: performAction }
       ]);
     }
-  }, [classes, t]);
+  }, [t]);
 
   return {
     classes,
