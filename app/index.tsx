@@ -4,6 +4,8 @@ import {
   Text,
   View,
   ScrollView,
+  Alert,
+  Platform
 } from 'react-native';
 
 // UI Components
@@ -13,6 +15,7 @@ import MemberTabs from '../components/ui/MemberTabs';
 import AddCourseBtn from '../components/ui/AddCourseBtn';
 import ClassCard from '../components/ui/ClassCard';
 import LogList from '../components/ui/LogList';
+import SwipeableItem from '../components/ui/SwipeableItem';
 
 // Modals
 import AddMemberModal from '../components/AddMemberModal';
@@ -29,7 +32,8 @@ export default function App() {
     members,
     currentMemberId,
     setCurrentMemberId,
-    handleAddMember
+    handleAddMember,
+    handleUpdateMember
   } = useMembers();
 
   const {
@@ -37,20 +41,44 @@ export default function App() {
     logs,
     stats,
     handleCheckIn,
-    handleAddClass
+    handleAddClass,
+    handleUpdateClass,
+    handleDeleteClass
   } = useClasses(currentMemberId, members);
 
   const [isAddMemberVisible, setIsAddMemberVisible] = useState(false);
   const [isAddClassVisible, setIsAddClassVisible] = useState(false);
+  const [editingMember, setEditingMember] = useState<any>(null);
+  const [editingClass, setEditingClass] = useState<any>(null);
 
-  const onAddMember = (name: string, icon: string, themeColor: string) => {
-    handleAddMember(name, icon, themeColor);
+  const onSaveMember = (data: { id?: string; name: string; icon: string; themeColor: string }) => {
+    if (data.id) {
+      handleUpdateMember(data.id, data);
+    } else {
+      handleAddMember(data.name, data.icon, data.themeColor);
+    }
     setIsAddMemberVisible(false);
+    setEditingMember(null);
   };
 
-  const onAddClass = (classItem: { name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: string }) => {
-    handleAddClass(classItem);
+  const onSaveClass = (data: { id?: string; name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: string; unitType: 'lesson' | 'session' }) => {
+    if (data.id) {
+      handleUpdateClass(data.id, data);
+    } else {
+      handleAddClass(data);
+    }
     setIsAddClassVisible(false);
+    setEditingClass(null);
+  };
+
+  const handleCloseMemberModal = () => {
+    setIsAddMemberVisible(false);
+    setEditingMember(null);
+  };
+
+  const handleCloseClassModal = () => {
+    setIsAddClassVisible(false);
+    setEditingClass(null);
   };
 
   return (
@@ -73,12 +101,30 @@ export default function App() {
           <Text style={styles.emptyText}>{t.noData}</Text>
         ) : (
           filteredClasses.map(item => (
-            <ClassCard
+            <SwipeableItem
               key={item.id}
-              classItem={item}
-              owner={item.owner}
-              onCheckIn={handleCheckIn}
-            />
+              onEdit={() => {
+                setEditingClass(item);
+                setIsAddClassVisible(true);
+              }}
+              onDelete={() => {
+                const msg = t.confirmDeleteMsg.replace('{course}', item.name);
+                if (Platform.OS === 'web') {
+                  if (window.confirm(msg)) handleDeleteClass(item.id);
+                } else {
+                  Alert.alert(t.confirmDeleteTitle, msg, [
+                    { text: t.cancel, style: 'cancel' },
+                    { text: t.confirm, style: 'destructive', onPress: () => handleDeleteClass(item.id) }
+                  ]);
+                }
+              }}
+            >
+              <ClassCard
+                classItem={item}
+                owner={item.owner}
+                onCheckIn={handleCheckIn}
+              />
+            </SwipeableItem>
           ))
         )}
       </View>
@@ -87,14 +133,16 @@ export default function App() {
 
       <AddMemberModal
         visible={isAddMemberVisible}
-        onClose={() => setIsAddMemberVisible(false)}
-        onAdd={onAddMember}
+        onClose={handleCloseMemberModal}
+        onAdd={onSaveMember}
+        initialData={editingMember}
       />
       <AddClassModal
         visible={isAddClassVisible}
-        onClose={() => setIsAddClassVisible(false)}
-        onAdd={onAddClass}
+        onClose={handleCloseClassModal}
+        onAdd={onSaveClass}
         members={members}
+        initialData={editingClass}
       />
     </ScrollView>
   );
