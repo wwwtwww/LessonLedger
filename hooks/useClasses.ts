@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Platform, Alert } from 'react-native';
-import { ClassItem, LogItem } from '../types';
+import { ClassItem, LogItem, Member } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
-export function useClasses() {
+export function useClasses(currentMemberId: string, members: Member[]) {
   const { t, lang } = useLanguage();
 
   const [classes, setClasses] = useState<ClassItem[]>([
@@ -22,6 +22,17 @@ export function useClasses() {
   }, [lang]);
 
   const [logs, setLogs] = useState<LogItem[]>([]);
+
+  const filteredClasses = useMemo(() => {
+    const list = currentMemberId === 'all'
+      ? classes
+      : classes.filter(c => c.memberId === currentMemberId);
+
+    return list.map(c => ({
+      ...c,
+      owner: members.find(m => m.id === c.memberId)
+    }));
+  }, [classes, currentMemberId, members]);
 
   const handleAddClass = useCallback((classItem: { name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: string }) => {
     setClasses(prev => [...prev, {
@@ -67,14 +78,15 @@ export function useClasses() {
         { text: t.confirm, onPress: performAction }
       ]);
     }
-  }, [classes, t, setClasses, setLogs]);
+  }, [classes, t]);
 
-  return { 
-    classes, 
-    setClasses, 
-    logs, 
-    stats, 
-    handleCheckIn, 
-    handleAddClass 
+  return {
+    classes,
+    filteredClasses,
+    setClasses,
+    logs,
+    stats,
+    handleCheckIn,
+    handleAddClass
   };
 }

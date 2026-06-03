@@ -102,6 +102,7 @@ interface LanguageContextType {
   lang: Language;
   t: typeof i18n['zh-CN'];
   setLang: (lang: Language) => void;
+  toggleLang: () => void;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -110,8 +111,12 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const [lang, setLang] = useState<Language>('zh-CN');
   const t = i18n[lang];
 
+  const toggleLang = () => {
+    setLang(prev => prev === 'zh-CN' ? 'en-US' : 'zh-CN');
+  };
+
   return (
-    <LanguageContext.Provider value={{ lang, t, setLang }}>
+    <LanguageContext.Provider value={{ lang, t, setLang, toggleLang }}>
       {children}
     </LanguageContext.Provider>
   );
