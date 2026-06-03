@@ -31,8 +31,8 @@ export function useClasses(currentMemberId: string, members: Member[]) {
     }, {} as Record<string, Member>);
 
     const list = currentMemberId === 'all'
-      ? classes
-      : classes.filter(c => c.memberId === currentMemberId);
+      ? classes.filter(c => !c.isDeleted)
+      : classes.filter(c => c.memberId === currentMemberId && !c.isDeleted);
 
     return list.map(c => ({
       ...c,
@@ -49,10 +49,19 @@ export function useClasses(currentMemberId: string, members: Member[]) {
     }]);
   }, []);
 
+  const handleUpdateClass = useCallback((id: string, data: Partial<ClassItem>) => {
+    setClasses(prev => prev.map(c => c.id === id ? { ...c, ...data } : c));
+  }, []);
+
+  const handleDeleteClass = useCallback((id: string) => {
+    setClasses(prev => prev.map(c => c.id === id ? { ...c, isDeleted: true } : c));
+  }, []);
+
   const stats = useMemo(() => {
-    const totalSpent = classes.reduce((sum, item) => sum + item.totalPrice, 0);
-    const totalClasses = classes.length;
-    const totalRemaining = classes.reduce((sum, item) => sum + (item.totalLessons - item.doneLessons), 0);
+    const activeClasses = classes.filter(c => !c.isDeleted);
+    const totalSpent = activeClasses.reduce((sum, item) => sum + item.totalPrice, 0);
+    const totalClasses = activeClasses.length;
+    const totalRemaining = activeClasses.reduce((sum, item) => sum + (item.totalLessons - item.doneLessons), 0);
     return { totalSpent, totalClasses, totalRemaining };
   }, [classes]);
 
@@ -99,6 +108,8 @@ export function useClasses(currentMemberId: string, members: Member[]) {
     logs,
     stats,
     handleCheckIn,
-    handleAddClass
+    handleAddClass,
+    handleUpdateClass,
+    handleDeleteClass
   };
 }

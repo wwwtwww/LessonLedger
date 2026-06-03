@@ -3,6 +3,7 @@ export interface Member {
   name: string;
   icon: string;
   themeColor: string;
+  isDeleted?: boolean;
 }
 
 export interface ClassItem {
@@ -14,6 +15,7 @@ export interface ClassItem {
   doneLessons: number;
   schedule: string;
   unitType: 'lesson' | 'session';
+  isDeleted?: boolean;
 }
 
 export interface LogItem {
