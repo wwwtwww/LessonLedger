@@ -6,6 +6,13 @@ export interface Member {
   isDeleted?: boolean;
 }
 
+export interface ScheduleEntry {
+  type: 'weekly' | 'specific';
+  day?: number;    // 0-6
+  date?: string;   // YYYY-MM-DD
+  time: string;    // HH:mm
+}
+
 export interface ClassItem {
   id: string;
   memberId: string;
@@ -13,7 +20,7 @@ export interface ClassItem {
   totalPrice: number;
   totalLessons: number;
   doneLessons: number;
-  schedule: string;
+  schedule: ScheduleEntry[];
   unitType: 'lesson' | 'session';
   isDeleted?: boolean;
 }
