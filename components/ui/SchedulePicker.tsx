@@ -51,10 +51,10 @@ export default function SchedulePicker({ value, onChange }: { value: ScheduleEnt
       <View style={styles.addForm}>
         <View style={styles.modeToggle}>
           <TouchableOpacity style={[styles.modeBtn, mode === 'weekly' && styles.modeBtnActive]} onPress={() => setMode('weekly')}>
-            <Text style={[styles.modeBtnText, mode === 'weekly' && styles.modeBtnTextActive]}>Weekly</Text>
+            <Text style={[styles.modeBtnText, mode === 'weekly' && styles.modeBtnTextActive]}>{lang === 'zh-CN' ? '按周重复' : 'Weekly'}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.modeBtn, mode === 'specific' && styles.modeBtnActive]} onPress={() => setMode('specific')}>
-            <Text style={[styles.modeBtnText, mode === 'specific' && styles.modeBtnTextActive]}>Specific</Text>
+            <Text style={[styles.modeBtnText, mode === 'specific' && styles.modeBtnTextActive]}>{lang === 'zh-CN' ? '特定日期' : 'Specific'}</Text>
           </TouchableOpacity>
         </View>
 

@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Member, ClassItem } from '../../types';
+import { formatSchedule } from '../../utils/formatters';
 
 interface ClassCardProps {
   classItem: ClassItem;
@@ -38,7 +39,7 @@ const ClassCard: React.FC<ClassCardProps> = ({ classItem, owner, onCheckIn }) =>
         <Text style={styles.classCost}>{lang === 'zh-CN' ? '￥' : '$'}{costPerUnit} / {unitLabel}</Text>
       </View>
 
-      <Text style={styles.classTime}>🕒 {t.schedule}: {classItem.schedule}</Text>
+      <Text style={styles.classTime}>🕒 {t.schedule}: {formatSchedule(classItem.schedule, lang)}</Text>
 
       <View style={styles.lessonInfoRow}>
         <Text style={styles.lessonText}>
@@ -84,6 +85,9 @@ const styles = StyleSheet.create({
   checkInBtn: { borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
   disabledBtn: { backgroundColor: '#CBD5E1' },
   checkInBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+});
+
+export default ClassCard;},
 });
 
 export default ClassCard;

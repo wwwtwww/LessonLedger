@@ -4,8 +4,9 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
   StyleSheet,
+  Platform,
+  Modal,
 } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -27,12 +28,31 @@ export default function AddClassModal({ visible, onClose, onAdd, members, initia
   const [totalLessons, setTotalLessons] = useState('');
   const [schedule, setSchedule] = useState('');
   const [unitType, setUnitType] = useState<'lesson' | 'session'>('lesson');
-  const [errors, setErrors] = useState<{ name?: string; memberId?: string }>({});
-  
-  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-  const snapPoints = useMemo(() => ['90%'], []);
+  const [error, setError] = useState('');
   const prevVisible = useRef(visible);
 
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const snapPoints = useMemo(() => ['90%'], []);
+
+  // Native Side: Sync BottomSheet
+  useEffect(() => {
+    if (Platform.OS !== 'web') {
+      if (visible) {
+        bottomSheetModalRef.current?.present();
+      } else {
+        bottomSheetModalRef.current?.dismiss();
+      }
+    }
+  }, [visible]);
+
+  const renderBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} pressBehavior="close" />
+    ),
+    []
+  );
+
+  // Reset state when modal opens
   useEffect(() => {
     if (visible && !prevVisible.current) {
       if (initialData) {
@@ -44,56 +64,155 @@ export default function AddClassModal({ visible, onClose, onAdd, members, initia
         setUnitType(initialData.unitType || 'lesson');
       } else {
         setName('');
-        setMemberId('');
+        setMemberId(members.length > 0 ? members[0].id : '');
         setTotalPrice('');
         setTotalLessons('');
         setSchedule('');
         setUnitType('lesson');
       }
-      setErrors({});
+      setError('');
     }
     prevVisible.current = visible;
-  }, [visible, initialData]);
-
-  useEffect(() => {
-    if (visible) {
-      bottomSheetModalRef.current?.present();
-    } else {
-      bottomSheetModalRef.current?.dismiss();
-    }
-  }, [visible]);
-
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} pressBehavior="close" />
-    ),
-    []
-  );
+  }, [visible, initialData, members]);
 
   const handleAdd = () => {
-    const newErrors: { name?: string; memberId?: string } = {};
-    if (!name.trim()) newErrors.name = t.nameRequired || 'Course name is required';
-    if (!memberId) newErrors.memberId = t.memberRequired || 'Please select a member';
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
+    if (!name.trim() || !memberId || !totalPrice || !totalLessons) {
+      setError(t.allFieldsRequired || 'All fields are required');
       return;
     }
-
-    const priceNum = parseFloat(totalPrice) || 0;
-    const lessonsNum = parseInt(totalLessons, 10) || 0;
-
+    
     onAdd({
       ...(initialData?.id ? { id: initialData.id } : {}),
       name: name.trim(),
       memberId,
-      totalPrice: priceNum,
-      totalLessons: lessonsNum,
+      totalPrice: Number(totalPrice),
+      totalLessons: Number(totalLessons),
       schedule: schedule.trim(),
       unitType,
     });
   };
 
+  const renderFormContent = () => (
+    <View style={styles.modalContent}>
+      <Text style={styles.title}>
+        {initialData ? t.editCourseTitle : t.addCourseTitle}
+      </Text>
+        
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>{t.courseName || 'Course Name'}</Text>
+        <TextInput
+          style={styles.input}
+          value={name}
+          onChangeText={setName}
+          placeholder="e.g. Piano"
+          placeholderTextColor="#9ca3af"
+        />
+      </View>
+
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>{t.bindMember || 'Bind Member'}</Text>
+        <View style={styles.memberPicker}>
+          {members.map((m) => (
+            <TouchableOpacity
+              key={m.id}
+              style={[
+                styles.memberChip,
+                memberId === m.id && { backgroundColor: m.themeColor, borderColor: m.themeColor },
+              ]}
+              onPress={() => setMemberId(m.id)}
+            >
+              <Text style={[styles.memberChipText, memberId === m.id && { color: '#fff' }]}>
+                {m.icon} {m.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.row}>
+        <View style={[styles.inputContainer, { flex: 1, marginRight: 10 }]}>
+          <Text style={styles.label}>{t.cost || 'Total Cost'}</Text>
+          <TextInput
+            style={styles.input}
+            value={totalPrice}
+            onChangeText={setTotalPrice}
+            keyboardType="numeric"
+            placeholder="0"
+            placeholderTextColor="#9ca3af"
+          />
+        </View>
+        <View style={[styles.inputContainer, { flex: 1 }]}>
+          <Text style={styles.label}>{t.totalHours || 'Total Lessons'}</Text>
+          <TextInput
+            style={styles.input}
+            value={totalLessons}
+            onChangeText={setTotalLessons}
+            keyboardType="numeric"
+            placeholder="0"
+            placeholderTextColor="#9ca3af"
+          />
+        </View>
+      </View>
+
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>{t.unitLabel || 'Unit Type'}</Text>
+        <View style={styles.unitPicker}>
+          <TouchableOpacity 
+            style={[styles.unitBtn, unitType === 'lesson' && styles.unitBtnActive]} 
+            onPress={() => setUnitType('lesson')}
+          >
+            <Text style={[styles.unitBtnText, unitType === 'lesson' && styles.unitBtnTextActive]}>{t.unitLesson}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.unitBtn, unitType === 'session' && styles.unitBtnActive]} 
+            onPress={() => setUnitType('session')}
+          >
+            <Text style={[styles.unitBtnText, unitType === 'session' && styles.unitBtnTextActive]}>{t.unitSession}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>{t.schedule || 'Schedule'}</Text>
+        <SchedulePicker value={schedule} onChange={setSchedule} />
+      </View>
+
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+      <View style={styles.actions}>
+        <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onClose}>
+          <Text style={styles.cancelButtonText}>{t.cancel || 'Cancel'}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.button, styles.addButton]} onPress={handleAdd}>
+          <Text style={styles.addButtonText}>
+            {initialData ? t.save : t.add}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  // Web Fallback
+  if (Platform.OS === 'web') {
+    return (
+      <Modal
+        visible={visible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={onClose}
+      >
+        <View style={styles.webOverlay}>
+          <TouchableOpacity style={styles.webDismissArea} activeOpacity={1} onPress={onClose} />
+          <View style={[styles.webSheet, { paddingBottom: 40 }]}>
+            <View style={styles.webHandle} />
+            {renderFormContent()}
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
+  // Native: BottomSheet
   return (
     <BottomSheetModal
       ref={bottomSheetModalRef}
@@ -103,139 +222,18 @@ export default function AddClassModal({ visible, onClose, onAdd, members, initia
       backdropComponent={renderBackdrop}
       keyboardBlurBehavior="restore"
     >
-      <View style={styles.modalContent}>
-        <BottomSheetScrollView showsVerticalScrollIndicator={false}>
-          <Text style={styles.title}>
-                {initialData ? t.editCourseTitle : t.addCourse}
-              </Text>
-                
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>{t.courseName || 'Course Name'} *</Text>
-                <TextInput
-                  style={[styles.input, errors.name ? styles.inputError : null]}
-                  value={name}
-                  onChangeText={(text) => {
-                    setName(text);
-                    if (errors.name) setErrors({ ...errors, name: undefined });
-                  }}
-                  placeholder={t.courseNamePlaceholder || 'e.g. Piano, English'}
-                  placeholderTextColor="#9ca3af"
-                />
-                {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
-              </View>
-
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>{t.bindMember || 'Bind Member'} *</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.memberSelectorRow}>
-                  {members.map(m => {
-                    const isSelected = memberId === m.id;
-                    return (
-                      <TouchableOpacity 
-                        key={m.id} 
-                        style={[
-                          styles.memberTab, 
-                          isSelected && { backgroundColor: m.themeColor, borderColor: 'transparent' }
-                        ]} 
-                        onPress={() => {
-                          setMemberId(m.id);
-                          if (errors.memberId) setErrors({ ...errors, memberId: undefined });
-                        }}
-                      >
-                        <Text style={[styles.memberTabText, isSelected && styles.memberTabTextActive]}>
-                          {m.icon} {m.name}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-                {errors.memberId ? <Text style={styles.errorText}>{errors.memberId}</Text> : null}
-              </View>
-
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>{t.unitLabel || 'Unit Type'}</Text>
-                <View style={styles.unitSelector}>
-                  <TouchableOpacity 
-                    style={[styles.unitButton, unitType === 'lesson' && styles.unitButtonActive]}
-                    onPress={() => setUnitType('lesson')}
-                  >
-                    <Text style={[styles.unitButtonText, unitType === 'lesson' && styles.unitButtonTextActive]}>
-                      {t.unitLesson}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.unitButton, unitType === 'session' && styles.unitButtonActive]}
-                    onPress={() => setUnitType('session')}
-                  >
-                    <Text style={[styles.unitButtonText, unitType === 'session' && styles.unitButtonTextActive]}>
-                      {t.unitSession}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View style={styles.row}>
-                <View style={[styles.inputContainer, styles.flex1, { marginRight: 10 }]}>
-                  <Text style={styles.label}>{t.cost || 'Total Cost'}</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={totalPrice}
-                    onChangeText={setTotalPrice}
-                    placeholder="0"
-                    placeholderTextColor="#9ca3af"
-                    keyboardType="numeric"
-                  />
-                </View>
-                <View style={[styles.inputContainer, styles.flex1]}>
-                  <Text style={styles.label}>{t.totalHours || 'Total Hours'}</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={totalLessons}
-                    onChangeText={setTotalLessons}
-                    placeholder="0"
-                    placeholderTextColor="#9ca3af"
-                    keyboardType="numeric"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>{t.schedule || 'Schedule'}</Text>
-                <TextInput
-                  style={styles.input}
-                  value={schedule}
-                  onChangeText={setSchedule}
-                  placeholder={t.schedulePlaceholder || 'e.g. Sat 14:00'}
-                  placeholderTextColor="#9ca3af"
-                />
-              </View>
-
-              <View style={styles.actions}>
-                <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onClose}>
-                  <Text style={styles.cancelButtonText}>{t.cancel || 'Cancel'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, styles.addButton]} onPress={handleAdd}>
-                  <Text style={styles.addButtonText}>
-                    {initialData ? t.save : t.add}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </BottomSheetScrollView>
-      </View>
+      <BottomSheetScrollView style={{ flex: 1 }}>
+        {renderFormContent()}
+      </BottomSheetScrollView>
     </BottomSheetModal>
   );
 }
 
 const styles = StyleSheet.create({
   modalContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-    maxHeight: '90%',
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+    paddingTop: 8,
   },
   title: {
     fontSize: 20,
@@ -246,12 +244,6 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     marginBottom: 16,
-  },
-  row: {
-    flexDirection: 'row',
-  },
-  flex1: {
-    flex: 1,
   },
   label: {
     fontSize: 14,
@@ -269,62 +261,59 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     backgroundColor: '#f9fafb',
   },
-  inputError: {
-    borderColor: '#ef4444',
-  },
-  errorText: {
-    color: '#ef4444',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  memberSelectorRow: {
+  memberPicker: {
     flexDirection: 'row',
-    paddingVertical: 4,
+    flexWrap: 'wrap',
+    gap: 8,
   },
-  memberTab: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+  memberChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginRight: 8,
+    borderColor: '#d1d5db',
+    backgroundColor: '#fff',
   },
-  memberTabText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#64748B',
+  memberChipText: {
+    fontSize: 14,
+    color: '#4b5563',
   },
-  memberTabTextActive: {
-    color: '#FFFFFF',
+  row: {
+    flexDirection: 'row',
   },
-  unitSelector: {
+  unitPicker: {
     flexDirection: 'row',
     backgroundColor: '#f3f4f6',
     borderRadius: 8,
     padding: 4,
   },
-  unitButton: {
+  unitBtn: {
     flex: 1,
     paddingVertical: 8,
     alignItems: 'center',
     borderRadius: 6,
   },
-  unitButtonActive: {
-    backgroundColor: '#ffffff',
+  unitBtnActive: {
+    backgroundColor: '#fff',
+    elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 1,
   },
-  unitButtonText: {
+  unitBtnText: {
     fontSize: 14,
+    color: '#64748B',
     fontWeight: '600',
-    color: '#6b7280',
   },
-  unitButtonTextActive: {
-    color: '#3b82f6',
+  unitBtnTextActive: {
+    color: '#0F172A',
+  },
+  errorText: {
+    color: '#ef4444',
+    fontSize: 12,
+    marginBottom: 16,
+    textAlign: 'center',
   },
   actions: {
     flexDirection: 'row',
@@ -354,5 +343,37 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Web Specific Styles
+  webOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  webDismissArea: {
+    flex: 1,
+  },
+  webSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    width: '100%',
+    maxWidth: 600,
+    alignSelf: 'center',
+  },
+  webHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 5,
+  },
+});ackgroundColor: '#E2E8F0',
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 5,
   },
 });
