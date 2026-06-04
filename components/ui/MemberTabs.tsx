@@ -1,8 +1,48 @@
 import React from 'react';
 import { StyleSheet, Text, ScrollView, TouchableOpacity } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Member } from '../../types';
+
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
+
+interface AnimatedTabProps {
+  isSelected: boolean;
+  onPress: () => void;
+  onLongPress?: () => void;
+  text: React.ReactNode;
+  themeColor: string;
+  defaultBgColor: string;
+  isAllTab?: boolean;
+}
+
+const AnimatedTab: React.FC<AnimatedTabProps> = ({ isSelected, onPress, onLongPress, text, themeColor, defaultBgColor, isAllTab }) => {
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      backgroundColor: withTiming(isSelected ? themeColor : defaultBgColor, { duration: 200 }),
+      borderColor: withTiming(isSelected ? 'transparent' : '#E2E8F0', { duration: 200 }),
+    };
+  });
+
+  const textAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      color: withTiming(isSelected ? '#FFFFFF' : '#64748B', { duration: 200 }),
+    };
+  });
+
+  return (
+    <AnimatedTouchableOpacity 
+      style={[styles.memberTab, animatedStyle]} 
+      onPress={onPress}
+      onLongPress={onLongPress}
+    >
+      <Animated.Text style={[styles.memberTabText, textAnimatedStyle, isAllTab && isSelected && styles.memberTabTextActive]}>
+        {text}
+      </Animated.Text>
+    </AnimatedTouchableOpacity>
+  );
+};
 
 interface MemberTabsProps {
   members: Member[];
@@ -27,32 +67,28 @@ const MemberTabs: React.FC<MemberTabsProps> = ({
       showsHorizontalScrollIndicator={false} 
       style={styles.memberSelectorRow}
     >
-      <TouchableOpacity 
-        style={[styles.memberTab, currentMemberId === 'all' && styles.memberTabActiveAll]} 
+      <AnimatedTab 
+        isSelected={currentMemberId === 'all'}
         onPress={() => onSelectMember('all')}
-      >
-        <Text style={[styles.memberTabText, currentMemberId === 'all' && styles.memberTabTextActive]}>
-          {t.allMembers}
-        </Text>
-      </TouchableOpacity>
-      {members.map(m => {
-        const isSelected = currentMemberId === m.id;
-        return (
-          <TouchableOpacity 
-            key={m.id} 
-            style={[styles.memberTab, isSelected && { backgroundColor: m.themeColor, borderColor: 'transparent' }]} 
-            onPress={() => onSelectMember(m.id)}
-            onLongPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              onLongPressMember?.(m);
-            }}
-          >
-            <Text style={[styles.memberTabText, isSelected && styles.memberTabTextActive]}>
-              {m.icon} {m.name}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
+        text={t.allMembers}
+        themeColor="#0F172A"
+        defaultBgColor="#FFFFFF"
+        isAllTab
+      />
+      {members.map(m => (
+        <AnimatedTab 
+          key={m.id}
+          isSelected={currentMemberId === m.id}
+          onPress={() => onSelectMember(m.id)}
+          onLongPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            onLongPressMember?.(m);
+          }}
+          text={`${m.icon} ${m.name}`}
+          themeColor={m.themeColor}
+          defaultBgColor="#FFFFFF"
+        />
+      ))}
       <TouchableOpacity 
         style={[styles.memberTab, styles.addMemberTab]} 
         onPress={onAddMemberPress}
