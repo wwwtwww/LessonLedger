@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#94A3B8',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 0,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
