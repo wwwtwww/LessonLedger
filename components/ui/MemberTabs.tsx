@@ -14,10 +14,9 @@ interface AnimatedTabProps {
   text: React.ReactNode;
   themeColor: string;
   defaultBgColor: string;
-  isAllTab?: boolean;
 }
 
-const AnimatedTab: React.FC<AnimatedTabProps> = ({ isSelected, onPress, onLongPress, text, themeColor, defaultBgColor, isAllTab }) => {
+const AnimatedTab: React.FC<AnimatedTabProps> = ({ isSelected, onPress, onLongPress, text, themeColor, defaultBgColor }) => {
   const animatedStyle = useAnimatedStyle(() => {
     return {
       backgroundColor: withTiming(isSelected ? themeColor : defaultBgColor, { duration: 200 }),
@@ -37,7 +36,7 @@ const AnimatedTab: React.FC<AnimatedTabProps> = ({ isSelected, onPress, onLongPr
       onPress={onPress}
       onLongPress={onLongPress}
     >
-      <Animated.Text style={[styles.memberTabText, textAnimatedStyle, isAllTab && isSelected && styles.memberTabTextActive]}>
+      <Animated.Text style={[styles.memberTabText, textAnimatedStyle]}>
         {text}
       </Animated.Text>
     </AnimatedTouchableOpacity>
@@ -73,7 +72,6 @@ const MemberTabs: React.FC<MemberTabsProps> = ({
         text={t.allMembers}
         themeColor="#0F172A"
         defaultBgColor="#FFFFFF"
-        isAllTab
       />
       {members.map(m => (
         <AnimatedTab 
@@ -111,9 +109,7 @@ const styles = StyleSheet.create({
     marginRight: 8, 
     height: 38 
   },
-  memberTabActiveAll: { backgroundColor: '#0F172A', borderColor: 'transparent' },
   memberTabText: { fontSize: 13, fontWeight: '700', color: '#64748B' },
-  memberTabTextActive: { color: '#FFFFFF' },
   addMemberTab: { borderStyle: 'dashed', backgroundColor: 'transparent' },
   addMemberTabText: { fontSize: 13, fontWeight: '700', color: '#64748B' },
 });
