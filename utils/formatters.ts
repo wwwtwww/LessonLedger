@@ -4,14 +4,14 @@ const DAYS_ZH = ['日', '一', '二', '三', '四', '五', '六'];
 const DAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export function formatSchedule(schedule: ScheduleEntry[] | string, lang: 'zh-CN' | 'en-US' = 'zh-CN') {
-  if (!schedule) return '未设置时间';
+  if (!schedule) return lang === 'zh-CN' ? '未设置时间' : 'No Schedule';
   
   // 兼容老数据的 fallback
   if (typeof schedule === 'string') {
     return schedule;
   }
 
-  if (schedule.length === 0) return '未设置时间';
+  if (schedule.length === 0) return lang === 'zh-CN' ? '未设置时间' : 'No Schedule';
 
   const daysMap = lang === 'zh-CN' ? DAYS_ZH : DAYS_EN;
   
@@ -28,8 +28,8 @@ export function formatSchedule(schedule: ScheduleEntry[] | string, lang: 'zh-CN'
   });
 
   const formattedWeekly = Object.entries(weeklyGroups).map(([time, days]) => {
-    days.sort((a, b) => a - b);
-    const dayStr = days.map(d => daysMap[d]).join('/');
+    const uniqueDays = Array.from(new Set(days)).sort((a, b) => a - b);
+    const dayStr = uniqueDays.map(d => daysMap[d]).join('/');
     return lang === 'zh-CN' ? `周${dayStr} ${time}` : `${dayStr} ${time}`;
   });
 
