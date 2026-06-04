@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   ScrollView,
   Alert,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // UI Components
 import AppHeader from '../components/ui/AppHeader';
@@ -26,6 +28,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useMembers } from '../hooks/useMembers';
 import { useClasses } from '../hooks/useClasses';
 import { Member, ClassItem } from '../types';
+import { supabase } from '../utils/supabase';
 
 export default function App() {
   const { t } = useLanguage();
@@ -35,7 +38,9 @@ export default function App() {
     setCurrentMemberId,
     handleAddMember,
     handleUpdateMember,
-    handleDeleteMember
+    handleDeleteMember,
+    fetchMembers,
+    isLoading: isMembersLoading
   } = useMembers();
 
   const {
@@ -45,7 +50,9 @@ export default function App() {
     handleCheckIn,
     handleAddClass,
     handleUpdateClass,
-    handleDeleteClass
+    handleDeleteClass,
+    fetchData: fetchClassesAndLogs,
+    isLoading: isClassesLoading
   } = useClasses(currentMemberId, members);
 
   const [isAddMemberVisible, setIsAddMemberVisible] = useState(false);
@@ -53,7 +60,51 @@ export default function App() {
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [editingClass, setEditingClass] = useState<ClassItem | null>(null);
 
+  // 初始化加载云端数据
+  useEffect(() => {
+    const initApp = async () => {
+      const fetchedMembers = await fetchMembers();
+      
+      // 如果云端 members 表为空，插入演示数据
+      if (fetchedMembers && fetchedMembers.length === 0) {
+        console.log('No members found. Inserting default demo data...');
+        
+        // 1. 插入默认成员
+        const { data: mData, error: mError } = await supabase
+          .from('members')
+          .insert([{ name: '哥哥', icon: '👦', themeColor: '#3B82F6', isDeleted: false }])
+          .select();
+        
+        if (!mError && mData) {
+          // 重新拉取一次成员以获取 ID
+          const updatedMembers = await fetchMembers();
+          
+          if (updatedMembers && updatedMembers.length > 0) {
+            const newMemberId = updatedMembers[0].id;
+            // 2. 插入默认课程
+            await supabase.from('classes').insert([{
+              memberId: newMemberId,
+              name: '钢琴',
+              totalPrice: 5000,
+              totalLessons: 22,
+              doneLessons: 10,
+              schedule: '周一晚 18:00',
+              unitType: 'lesson',
+              isDeleted: false
+            }]);
+          }
+        }
+      }
+      
+      // 拉取课程和日志
+      fetchClassesAndLogs();
+    };
+
+    initApp();
+  }, [fetchMembers, fetchClassesAndLogs]);
+
   const onSaveMember = (data: { id?: string; name: string; icon: string; themeColor: string }) => {
+    console.log('app/index.tsx: onSaveMember called with', data);
     if (data.id) {
       handleUpdateMember(data.id, data);
     } else {
@@ -125,9 +176,23 @@ export default function App() {
     );
   };
 
+  if (isMembersLoading || isClassesLoading) {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <ActivityIndicator size="large" color="#3B82F6" />
+        <Text style={styles.loadingText}>Syncing with Cloud...</Text>
+      </View>
+    );
+  }
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <AppHeader />
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScrollView 
+        style={styles.container} 
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        <AppHeader />
 
       <SummaryCard stats={stats} />
 
@@ -175,6 +240,7 @@ export default function App() {
       </View>
 
       <LogList logs={logs} />
+      </ScrollView>
 
       <AddMemberModal
         visible={isAddMemberVisible}
@@ -189,11 +255,15 @@ export default function App() {
         members={members}
         initialData={editingClass}
       />
-    </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F8FAFC'
+  },
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC'
@@ -204,6 +274,14 @@ const styles = StyleSheet.create({
     maxWidth: 600,
     width: '100%',
     marginHorizontal: 'auto'
+  },
+  center: {
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#64748B'
   },
   listSection: {
     marginBottom: 20
