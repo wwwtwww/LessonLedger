@@ -1,15 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
-  Modal,
   View,
   Text,
   TextInput,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
+import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Member, ClassItem } from '../types';
 
@@ -30,6 +28,9 @@ export default function AddClassModal({ visible, onClose, onAdd, members, initia
   const [schedule, setSchedule] = useState('');
   const [unitType, setUnitType] = useState<'lesson' | 'session'>('lesson');
   const [errors, setErrors] = useState<{ name?: string; memberId?: string }>({});
+  
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const snapPoints = useMemo(() => ['90%'], []);
   const prevVisible = useRef(visible);
 
   useEffect(() => {
@@ -53,6 +54,21 @@ export default function AddClassModal({ visible, onClose, onAdd, members, initia
     }
     prevVisible.current = visible;
   }, [visible, initialData]);
+
+  useEffect(() => {
+    if (visible) {
+      bottomSheetModalRef.current?.present();
+    } else {
+      bottomSheetModalRef.current?.dismiss();
+    }
+  }, [visible]);
+
+  const renderBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} pressBehavior="close" />
+    ),
+    []
+  );
 
   const handleAdd = () => {
     const newErrors: { name?: string; memberId?: string } = {};
@@ -79,15 +95,17 @@ export default function AddClassModal({ visible, onClose, onAdd, members, initia
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.modalContainer}
-        >
-          <View style={styles.modalContent}>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.title}>
+    <BottomSheetModal
+      ref={bottomSheetModalRef}
+      index={0}
+      snapPoints={snapPoints}
+      onDismiss={onClose}
+      backdropComponent={renderBackdrop}
+      keyboardBlurBehavior="restore"
+    >
+      <View style={styles.modalContent}>
+        <BottomSheetScrollView showsVerticalScrollIndicator={false}>
+          <Text style={styles.title}>
                 {initialData ? t.editCourseTitle : t.addCourse}
               </Text>
                 
@@ -201,26 +219,13 @@ export default function AddClassModal({ visible, onClose, onAdd, members, initia
                   </Text>
                 </TouchableOpacity>
               </View>
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
+            </BottomSheetScrollView>
       </View>
-    </Modal>
+    </BottomSheetModal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContainer: {
-    width: '100%',
-    maxWidth: 400,
-  },
   modalContent: {
     backgroundColor: '#ffffff',
     borderRadius: 16,
