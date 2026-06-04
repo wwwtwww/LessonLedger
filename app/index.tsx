@@ -9,6 +9,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 
 // UI Components
 import AppHeader from '../components/ui/AppHeader';
@@ -192,8 +193,6 @@ export default function App() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        <AppHeader />
-
       <SummaryCard stats={stats} />
 
       <MemberTabs
@@ -242,6 +241,10 @@ export default function App() {
       <LogList logs={logs} />
       </ScrollView>
 
+      <BlurView intensity={80} tint="light" style={styles.headerBlur}>
+        <AppHeader />
+      </BlurView>
+
       <AddMemberModal
         visible={isAddMemberVisible}
         onClose={handleCloseMemberModal}
@@ -269,11 +272,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC'
   },
   contentContainer: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 80,
     paddingBottom: 50,
     maxWidth: 600,
     width: '100%',
     marginHorizontal: 'auto'
+  },
+  headerBlur: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
   },
   center: {
     justifyContent: 'center',
