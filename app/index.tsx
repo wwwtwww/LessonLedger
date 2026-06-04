@@ -178,10 +178,10 @@ export default function App() {
 
   if (isMembersLoading || isClassesLoading) {
     return (
-      <View style={[styles.container, styles.center]}>
+      <SafeAreaView style={[styles.safeArea, styles.center]} edges={['top']}>
         <ActivityIndicator size="large" color="#3B82F6" />
         <Text style={styles.loadingText}>Syncing with Cloud...</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
