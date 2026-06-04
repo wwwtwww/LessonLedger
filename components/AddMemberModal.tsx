@@ -1,15 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
-  Modal,
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
+import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Member } from '../types';
 
@@ -29,6 +28,24 @@ export default function AddMemberModal({ visible, onClose, onAdd, initialData }:
   const [themeColor, setThemeColor] = useState(PREDEFINED_COLORS[0]);
   const [error, setError] = useState('');
   const prevVisible = useRef(visible);
+  
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const snapPoints = useMemo(() => ['75%'], []);
+
+  useEffect(() => {
+    if (visible) {
+      bottomSheetModalRef.current?.present();
+    } else {
+      bottomSheetModalRef.current?.dismiss();
+    }
+  }, [visible]);
+
+  const renderBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} pressBehavior="close" />
+    ),
+    []
+  );
 
   // Reset state when modal opens
   useEffect(() => {
@@ -63,101 +80,84 @@ export default function AddMemberModal({ visible, onClose, onAdd, initialData }:
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.modalContainer}
-        >
-          <View style={styles.modalContent}>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.title}>
-                {initialData ? t.editMemberTitle : t.addMemberTitle}
-              </Text>
-                
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>{t.nameLabel || 'Name'}</Text>
-                <TextInput
-                  style={[styles.input, error ? styles.inputError : null]}
-                  value={name}
-                  onChangeText={(text) => {
-                    setName(text);
-                    setError('');
-                  }}
-                  placeholder={t.namePlaceholder || 'Enter member name'}
-                  placeholderTextColor="#9ca3af"
-                />
-                {error ? <Text style={styles.errorText}>{error}</Text> : null}
-              </View>
+    <BottomSheetModal
+      ref={bottomSheetModalRef}
+      index={0}
+      snapPoints={snapPoints}
+      onDismiss={onClose}
+      backdropComponent={renderBackdrop}
+      keyboardBlurBehavior="restore"
+    >
+      <BottomSheetView style={styles.modalContent}>
+        <Text style={styles.title}>
+          {initialData ? t.editMemberTitle : t.addMemberTitle}
+        </Text>
+          
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>{t.nameLabel || 'Name'}</Text>
+          <TextInput
+            style={[styles.input, error ? styles.inputError : null]}
+            value={name}
+            onChangeText={(text) => {
+              setName(text);
+              setError('');
+            }}
+            placeholder={t.namePlaceholder || 'Enter member name'}
+            placeholderTextColor="#9ca3af"
+          />
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        </View>
 
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>{t.iconLabel || 'Icon (Emoji)'}</Text>
-                <TextInput
-                  style={styles.input}
-                  value={icon}
-                  onChangeText={setIcon}
-                  placeholder={t.iconPlaceholder || '👤'}
-                  placeholderTextColor="#9ca3af"
-                  maxLength={2}
-                />
-              </View>
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>{t.iconLabel || 'Icon (Emoji)'}</Text>
+          <TextInput
+            style={styles.input}
+            value={icon}
+            onChangeText={setIcon}
+            placeholder={t.iconPlaceholder || '👤'}
+            placeholderTextColor="#9ca3af"
+            maxLength={2}
+          />
+        </View>
 
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>{t.themeColorLabel || 'Theme Color'}</Text>
-                <View style={styles.colorPicker}>
-                  {PREDEFINED_COLORS.map((color) => (
-                    <TouchableOpacity
-                      key={color}
-                      style={[
-                        styles.colorCircle,
-                        { backgroundColor: color },
-                        themeColor === color && styles.colorSelected,
-                      ]}
-                      onPress={() => setThemeColor(color)}
-                    />
-                  ))}
-                </View>
-              </View>
-
-              <View style={styles.actions}>
-                <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onClose}>
-                  <Text style={styles.cancelButtonText}>{t.cancel || 'Cancel'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, styles.addButton]} onPress={handleAdd}>
-                  <Text style={styles.addButtonText}>
-                    {initialData ? t.save : t.add}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>{t.themeColorLabel || 'Theme Color'}</Text>
+          <View style={styles.colorPicker}>
+            {PREDEFINED_COLORS.map((color) => (
+              <TouchableOpacity
+                key={color}
+                style={[
+                  styles.colorCircle,
+                  { backgroundColor: color },
+                  themeColor === color && styles.colorSelected,
+                ]}
+                onPress={() => setThemeColor(color)}
+              />
+            ))}
           </View>
-        </KeyboardAvoidingView>
-      </View>
-    </Modal>
+        </View>
+
+        <View style={styles.actions}>
+          <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onClose}>
+            <Text style={styles.cancelButtonText}>{t.cancel || 'Cancel'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.button, styles.addButton]} onPress={handleAdd}>
+            <Text style={styles.addButtonText}>
+              {initialData ? t.save : t.add}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </BottomSheetView>
+    </BottomSheetModal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContainer: {
-    width: '100%',
-    maxWidth: 400,
-  },
   modalContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+    paddingTop: 8,
   },
   title: {
     fontSize: 20,
