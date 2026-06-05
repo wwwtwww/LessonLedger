@@ -1,69 +1,95 @@
-# Project Analysis Report: LessonLedger
+# LessonLedger 项目概要
 
-## 1. Project Overview
-LessonLedger 是一个轻量级的课时管理移动应用，专为家庭和个人设计。它旨在帮助用户追踪各种课程（如钢琴、美术、健身等）的课时消耗、剩余次数以及财务投入。
+## 1. 项目定位
+LessonLedger 是一个轻量级的课时管理移动应用，旨在帮助家庭和个人透明化管理各类课程资产。它支持多成员统筹、多语种切换，并提供防纠纷的打卡日志凭证。
 
-该项目的主要目标是提供一个简洁直观的界面，让用户能够快速完成课时“打卡”记录，同时通过多维度的数据看板（如总投入、剩余课时预警等）实现对家庭教育或自我提升资产的透明化管理。
+## 2. 已实现核心功能 (Feature List)
+- **多成员管理 (CRUD)**: 
+  - 支持创建成员，配置专属图标（Emoji）和主题色。
+  - **交互升级**：支持长按成员头像唤起菜单，且在不同成员间切换时拥有丝滑的渐变动画过渡。
+- **动态课时账本 (CRUD)**:
+  - 核心消课打卡：实时计算剩余课时，支持“课时”和“次”两种单位。
+  - **侧滑操作**：课程列表支持原生侧滑手势，快速进行编辑或删除。
+  - **预警系统**：当课时少于 3 课时时，UI 自动变红预警。
+- **智能排期与提醒 (Schedule & Notifications)**:
+  - 弃用手动输入，引入结构化的时间选择器（支持按周重复或单次指定日期）。
+  - 内置基于 `expo-notifications` 的本地推送引擎，自动解析排期并在上课前 2 小时发送手机系统通知。打卡、删改课程时闹钟自动顺延或清理。
+- **沉浸式原生体验 (Premium Native UX)**:
+  - 引入 `react-native-safe-area-context` 完美避开 Android/iOS 的状态栏和刘海屏。
+  - 采用顶部毛玻璃（Glassmorphism）悬浮导航栏，提供极致的视差滚动美感。
+  - 所有表单弹窗全面升级为基于 `@gorhom/bottom-sheet` 的底层抽屉，且在 Web 端自动优雅降级为高仿真 Modal。
+- **数据看板 (Dashboard)**:
+  - 实时汇总总支出、活跃课程总数及全员剩余课时。
+  - 支持按成员筛选视图。
+- **打卡日志系统**: 自动记录每次消课的时间、成员及变动详情。
+- **国际化 (i18n)**: 深度集成中英文双语环境，支持实时切换。
 
-## 2. Tech Stack
-| Category | Technologies |
-| :--- | :--- |
-| **Languages** | TypeScript |
-| **Frameworks** | Expo (SDK 54), React Native 0.81.5 |
-| **Database** | N/A (目前为内存 Mock 数据，未来计划支持 AsyncStorage 或 SQLite) |
-| **Routing** | Expo Router (File-based routing) |
-| **Styling** | React Native StyleSheet |
-| **Build Tools** | Metro Bundler |
+## 3. 架构设计 (Architecture)
 
-## 3. Core Features
-- **多成员管理**: 支持为不同家庭成员（如哥哥、妹妹、妈妈）设置独立的配置（名称、图标、主题色）。
-- **课时打卡系统**: 核心的“消课”逻辑，包含余额验证、操作确认以及自动生成打卡日志。
-- **动态资产看板**: 实时计算总支出、正在进行的课程数量及总剩余课时，并提供低余额预警（少于 3 课时时变红）。
-- **成员视图过滤**: 允许用户按成员筛选显示的课程，方便快速查看。
-- **国际化 (i18n)**: 支持中英文双语实时切换。
+项目采用 **"Orchestrator-Hooks-UI"** 分层架构，实现了业务逻辑与展现层的深度解耦：
 
-## 4. REST Services & Endpoints
-目前该项目为纯客户端应用，不包含任何 REST 接口。
+### 3.1 核心分层
+- **Context 层 (`LanguageContext`)**: 提供全局的国际化状态和 `t` 翻译函数，是整个应用的最底层支撑。
+- **Hooks 逻辑层**:
+  - `useMembers`: 管理全量成员状态，对外暴露过滤后的 `visibleMembers` 及 CRUD 操作方法。
+  - `useClasses`: 依赖 `members` 状态，负责课程过滤、资产统计、消课逻辑、日志生成以及**本地通知的生命周期管理**。
+- **Services 服务层**:
+  - `utils/supabase.ts`: 处理与 Supabase 的连接及 SSR 安全的本地缓存。
+  - `utils/notifications.ts`: 封装底层通知 API 和复杂的时间推算算法。
+- **Orchestrator (容器层 - `app/index.tsx`)**: 作为纯净的调度中心，通过 Hooks 获取数据并分发给各 UI 组件，并负责初始化时的并发请求及默认数据写入。
+- **UI 组件层**: 
+  - `components/ui/`: 纯展示组件。
+  - `components/`: 功能性底部抽屉，内置表单状态管理。
 
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| N/A | N/A | 纯单机/客户端逻辑 |
+### 3.2 数据流向 (Data Flow)
+1. **初始化**: `app/index.tsx` 并行调用 API 获取全量数据，若检测到空库，强制执行写入引导流程。
+2. **状态联动**: 当 `useMembers` 中的成员被逻辑删除时，`useClasses` 内部的 `useMemo` 会自动重新计算，从 UI 中同步隐藏该成员的所有课程，并更新 `SummaryCard` 的总资产统计。
+3. **操作反馈**: 
+   - 用户触发事件 -> 调用 Hook 方法 -> 清洗冗余字段并映射为纯小写 (Postgres 兼容) -> 发起 Supabase 请求。
+   - 请求成功后 -> 同步更新本地状态，触发全应用响应式重绘。
 
-## 5. Project Structure
-```text
-LessonLedger/
-├── app/                # Expo Router 页面目录
-│   ├── _layout.tsx     # 全局布局与导航配置
-│   └── index.tsx       # 核心业务逻辑与主页面
-├── assets/             # 静态资源（图标、开屏图等）
-├── docs/               # 项目文档
-│   └── PRD.md          # 产品需求文档
-├── package.json        # 项目依赖与配置
-└── tsconfig.json       # TypeScript 配置
+## 4. 技术栈 (Tech Stack)
+- **Framework**: Expo (SDK 54), React Native (0.81.5)
+- **Backend**: Supabase (Cloud Database, UUIDs, JSONB)
+- **Storage**: `@react-native-async-storage/async-storage` (Web SSR Safe)
+- **Language**: TypeScript (严格模式)
+- **Animations/Gestures**: `react-native-gesture-handler`, `react-native-reanimated`, `@gorhom/bottom-sheet`
+- **Notifications**: `expo-notifications`
+- **Haptics**: `expo-haptics` (物理触感反馈)
+
+## 5. 核心数据模型 (Data Models)
+```typescript
+interface Member {
+  id: string; // Supabase UUID
+  name: string;
+  icon: string;
+  themeColor: string;
+  isDeleted?: boolean;
+}
+
+interface ScheduleEntry {
+  type: 'weekly' | 'specific';
+  day?: number;    // 0-6
+  date?: string;   // YYYY-MM-DD
+  time: string;    // HH:mm
+}
+
+interface ClassItem {
+  id: string; // Supabase UUID
+  memberId: string;
+  name: string;
+  totalPrice: number;
+  totalLessons: number;
+  doneLessons: number;
+  unitType: 'lesson' | 'session';
+  schedule: ScheduleEntry[]; // JSONB 格式存储
+  notificationIds?: string[]; // 本地闹钟索引
+  isDeleted?: boolean;
+}
 ```
 
-## 6. Architecture Summary
-项目目前采用**紧耦合的单页面组件模式**。所有的状态管理（`useState`）、业务逻辑（打卡函数、统计计算）、国际化配置以及 UI 渲染均集中在 `app/index.tsx` 文件中。这种结构在原型开发阶段非常高效，但随着功能增加，建议向 **Hooks/Services 分层架构** 演进。
-
-## 7. Data Architecture & Models
-- **Database**: 目前没有持久化存储。
-- **Key Entities**:
-    - `Member`: 定义成员属性（ID、姓名、图标、主题色）。
-    - `ClassItem`: 定义课程核心属性（价格、总课时、已上课时、上课频率等）。
-    - `LogItem`: 记录消课历史（时间、描述文本）。
-
-## 8. External Integrations
-- **Expo SDK**: 提供原生功能的桥接。
-- **Expo Router**: 处理应用内的导航流。
-
-## 9. CI/CD & DevOps
-- **Development**: 使用 Expo CLI 进行本地开发和热更新。
-- **Deployment**: N/A (目前处于开发初期)。
-
-## 10. Testing Strategy
-- **Frameworks**: 尚未集成正式的测试框架。
-- **Validation**: 目前主要通过 Expo Go 进行手动验证。
-
-## 11. Other Relevant Information
-- **Build/Run Instructions**: 使用 `npm run start` 启动 Expo 开发服务器。
-- **Critical File**: `app/index.tsx` 是目前项目的全部核心所在。
+## 6. 路线图 (Roadmap)
+- [x] **数据持久化**: 接入 Supabase 云端数据库，实现了成员、课程和日志的云端存储与实时同步。
+- [x] **提醒功能**: 实现基于结构化时间的课前 2 小时自动本地推送通知。
+- [x] **高级原生 UI**: 引入 Bottom Sheet、毛玻璃头部、安全区适配及色彩过渡动画。
+- [ ] **统计报表**: 增加消费和消耗的可视化图表（按成员/月份维度的饼图与趋势图）。
