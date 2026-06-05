@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { COLORS } from '../../utils/colors';
 
 const AppHeader: React.FC = () => {
   const { t, toggleLang } = useLanguage();
@@ -14,8 +15,8 @@ const AppHeader: React.FC = () => {
       </View>
 
       {/* 右侧：语言切换按钮 */}
-      <TouchableOpacity style={styles.langBtn} onPress={toggleLang}>
-        <Text style={styles.langBtnText}>🌐 {t.switchLang}</Text>
+      <TouchableOpacity style={styles.langBtn} onPress={toggleLang}>    
+        <Text style={styles.langBtnText}>🌐 {t.switchLang}</Text>       
       </TouchableOpacity>
     </View>
   );
@@ -23,10 +24,10 @@ const AppHeader: React.FC = () => {
 
 const styles = StyleSheet.create({
   topBar: {
+    flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 0,
   },
   titleGroup: {
     flexDirection: 'column',
@@ -35,29 +36,34 @@ const styles = StyleSheet.create({
   appTitle: {
     fontSize: 22,
     fontWeight: '900',
-    color: '#0F172A',
+    color: COLORS.text,
     textAlign: 'left',
   },
   appSubTitle: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#94A3B8',
+    color: COLORS.textLight,
     textAlign: 'left',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   langBtn: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 15,
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.border,
+    shadowColor: COLORS.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   langBtnText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#475569',
+    color: COLORS.text,
   },
 });
 

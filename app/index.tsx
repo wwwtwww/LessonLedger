@@ -10,16 +10,16 @@ import {
   SafeAreaView,
   StatusBar
 } from 'react-native';
-import { BlurView } from 'expo-blur';
 
 // UI Components
-import AppHeader from '../components/ui/AppHeader';        
+import GlassHeader from '../components/ui/GlassHeader';
+import AppHeader from '../components/ui/AppHeader';
 import SummaryCard from '../components/dashboard/SummaryCard';    
 import MemberTabs from '../components/dashboard/MemberTabs';      
-import AddCourseBtn from '../components/ui/AddCourseBtn';  
-import ClassCard from '../components/classes/ClassCard';        
+import AddCourseBtn from '../components/ui/AddCourseBtn';
+import ClassCard from '../components/classes/ClassCard';
 import LogList from '../components/logs/LogList';
-import SwipeableItem from '../components/ui/SwipeableItem';
+import SwipeableItem from '../components/ui/SwipeableItem';       
 
 // Modals
 import AddMemberSheet from '../components/sheets/AddMemberSheet'; 
@@ -31,14 +31,17 @@ import { useClasses } from '../hooks/useClasses';
 import { Member, ClassItem, ScheduleEntry } from '../types';
 import { supabase } from '../utils/supabase';
 import { requestPermissionsAsync } from '../utils/notifications';
+import { COLORS } from '../utils/colors';
 
 // UI Constants
-const HEADER_HEIGHT = 80;
+const HEADER_CONTENT_HEIGHT = 64; // GlassHeader 内部内容的高度
 const WEB_PADDING = 20;
-const MOBILE_PADDING = 10;
-const HEADER_OFFSET = (Platform.OS === 'web' ? WEB_PADDING : MOBILE_PADDING) + HEADER_HEIGHT - 5; // -5px for visual optical compensation
+const MOBILE_PADDING = 16;
+// HEADER_OFFSET 应该包含状态栏高度 + Header 内容高度 + 间距
+const HEADER_OFFSET = (Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0) + HEADER_CONTENT_HEIGHT + MOBILE_PADDING;
 
 export default function App() {
+
   const { t } = useLanguage();
   const {
     members,
@@ -200,14 +203,12 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" translucent={true} />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
       
-      {/* 沉浸式毛玻璃头部 - 放在 ScrollView 之上以实现固定悬浮 */}
-      <BlurView intensity={80} tint="light" style={styles.headerBlur}>
-        <View style={styles.headerContainer}>
-          <AppHeader />
-        </View>
-      </BlurView>
+      {/* 沉浸式毛玻璃头部 */}
+      <GlassHeader>
+        <AppHeader />
+      </GlassHeader>
 
       <ScrollView 
         style={styles.container} 
@@ -289,13 +290,11 @@ export default function App() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
-    // 彻底解决安卓状态栏遮挡的核心逻辑
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    backgroundColor: COLORS.background,
   },
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC'
+    backgroundColor: COLORS.background,
   },
   contentContainer: {
     paddingHorizontal: 20,
@@ -304,28 +303,13 @@ const styles = StyleSheet.create({
     width: '100%',
     marginHorizontal: 'auto'
   },
-  headerBlur: {
-    position: 'absolute',
-    top: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-    paddingTop: 10,
-    paddingBottom: 15,
-  },
-  headerContainer: {
-    maxWidth: 600,
-    width: '100%',
-    marginHorizontal: 'auto',
-    paddingHorizontal: 20,
-  },
   center: {
     justifyContent: 'center',
     alignItems: 'center'
   },
   loadingText: {
     marginTop: 10,
-    color: '#64748B'
+    color: COLORS.textLight,
   },
   listSection: {
     marginBottom: 20
