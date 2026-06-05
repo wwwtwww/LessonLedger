@@ -23,6 +23,7 @@ export interface ClassItem {
   schedule: ScheduleEntry[];
   unitType: 'lesson' | 'session';
   isDeleted?: boolean;
+  notificationIds?: string[];
 }
 
 export interface LogItem {

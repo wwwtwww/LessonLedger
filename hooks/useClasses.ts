@@ -2,29 +2,37 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Platform, Alert } from 'react-native';
 import { ClassItem, LogItem, Member } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
+import { supabase } from '../utils/supabase';
 
 export function useClasses(currentMemberId: string, members: Member[]) {
-  const { t, lang } = useLanguage();
-
-  const [classes, setClasses] = useState<ClassItem[]>([
-    { id: 'c1', memberId: 'm1', name: lang === 'zh-CN' ? '钢琴' : 'Piano', totalPrice: 5000, totalLessons: 22, doneLessons: 10, schedule: '周一晚 18:00', unitType: 'lesson' },
-    { id: 'c2', memberId: 'm2', name: lang === 'zh-CN' ? '美术' : 'Art', totalPrice: 2000, totalLessons: 20, doneLessons: 3, schedule: '周三六 14:00', unitType: 'lesson' },
-    { id: 'c3', memberId: 'm3', name: lang === 'zh-CN' ? '私教健身' : 'Fitness Gym', totalPrice: 3000, totalLessons: 10, doneLessons: 8, schedule: '周五晚 19:30', unitType: 'session' },
-  ]);
-
-  useEffect(() => {
-    setClasses(prev => prev.map(item => {
-      if (item.id === 'c1') return { ...item, name: lang === 'zh-CN' ? '钢琴' : 'Piano' };
-      if (item.id === 'c2') return { ...item, name: lang === 'zh-CN' ? '美术' : 'Art' };
-      if (item.id === 'c3') return { ...item, name: lang === 'zh-CN' ? '私教健身' : 'Fitness Gym' };
-      return item;
-    }));
-  }, [lang]);
-
+  const { t } = useLanguage();
+  const [classes, setClasses] = useState<ClassItem[]>([]);
   const [logs, setLogs] = useState<LogItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    const [classesRes, logsRes] = await Promise.all([
+      supabase.from('classes').select('*').is('isDeleted', false).order('id', { ascending: true }),
+      supabase.from('logs').select('*').order('created_at', { ascending: false }).limit(20)
+    ]);
+
+    if (!classesRes.error && classesRes.data) {
+      setClasses(classesRes.data);
+    }
+    if (!logsRes.error && logsRes.data) {
+      // 转换 Supabase 的 created_at 为我们需要的 time 格式
+      const formattedLogs = logsRes.data.map((log: any) => ({
+        id: log.id.toString(),
+        time: new Date(log.created_at).toLocaleString(),
+        text: log.text
+      }));
+      setLogs(formattedLogs);
+    }
+    setIsLoading(false);
+  }, []);
 
   const filteredClasses = useMemo(() => {
-    // 性能优化：构建成员 Map，实现 O(1) 查找
     const memberMap = members.reduce((acc, m) => {
       acc[m.id] = m;
       return acc;
@@ -40,20 +48,61 @@ export function useClasses(currentMemberId: string, members: Member[]) {
     }));
   }, [classes, currentMemberId, members]);
 
-  const handleAddClass = useCallback((classItem: { name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: string }) => {
-    setClasses(prev => [...prev, {
-      ...classItem,
-      id: 'c' + Date.now(),
-      doneLessons: 0,
-      unitType: 'lesson'
-    }]);
+  const handleAddClass = useCallback(async (classItem: Omit<ClassItem, 'id' | 'doneLessons' | 'isDeleted' | 'owner' | 'notificationIds'>) => {
+    console.log('Adding class:', classItem);
+    const newClass = { ...classItem, doneLessons: 0, isDeleted: false };
+    const { data, error } = await supabase
+      .from('classes')
+      .insert([newClass])
+      .select();
+    
+    if (error) {
+      console.error('Error adding class:', error.message);
+      if (Platform.OS === 'web') alert(`Failed to add course: ${error.message}`);
+      else Alert.alert('Error', `Failed to add course: ${error.message}`);
+      return;
+    }
+
+    if (data) {
+      console.log('Class added successfully:', data[0]);
+      setClasses(prev => [...prev, data[0]]);
+    }
   }, []);
 
-  const handleUpdateClass = useCallback((id: string, data: Partial<ClassItem>) => {
+  const handleUpdateClass = useCallback(async (id: string, data: Partial<ClassItem>) => {
+    console.log('Updating class:', id, data);
+    const updateData = { ...data };
+    delete (updateData as any).id;
+    delete (updateData as any).owner; // 确保不包含关联对象
+
+    const { error } = await supabase
+      .from('classes')
+      .update(updateData)
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error updating class:', error.message);
+      if (Platform.OS === 'web') alert(`Failed to update course: ${error.message}`);
+      else Alert.alert('Error', `Failed to update course: ${error.message}`);
+      return;
+    }
+
     setClasses(prev => prev.map(c => c.id === id ? { ...c, ...data } : c));
   }, []);
 
-  const handleDeleteClass = useCallback((id: string) => {
+  const handleDeleteClass = useCallback(async (id: string) => {
+    console.log('Deleting class:', id);
+    const { error } = await supabase
+      .from('classes')
+      .update({ isDeleted: true })
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error deleting class:', error.message);
+      Alert.alert('Error', `Failed to delete course: ${error.message}`);
+      return;
+    }
+
     setClasses(prev => prev.map(c => c.id === id ? { ...c, isDeleted: true } : c));
   }, []);
 
@@ -67,28 +116,55 @@ export function useClasses(currentMemberId: string, members: Member[]) {
   }, [classes, members]);
 
   const handleCheckIn = useCallback((classId: string, className: string, memberName: string) => {
-    const performAction = () => {
-      // 修复闭包陷阱：将余额检查和日志生成逻辑移至更新器外部，但基于最新的 classes 状态
-      // 这里我们直接在 setClasses 的函数式更新中处理，以确保数据的绝对新鲜
-      setClasses(prevClasses => {
-        const item = prevClasses.find(c => c.id === classId);
-        if (!item || item.isDeleted) return prevClasses;
+    const performAction = async () => {
+      const item = classes.find(c => c.id === classId);
+      if (!item || item.isDeleted) return;
 
-        if (item.doneLessons >= item.totalLessons) {
-          if (Platform.OS === 'web') alert(t.noRemainingError);
-          else Alert.alert('', t.noRemainingError);
-          return prevClasses;
-        }
+      if (item.doneLessons >= item.totalLessons) {
+        const errorMsg = t.noRemainingError;
+        if (Platform.OS === 'web') alert(errorMsg);
+        else Alert.alert('', errorMsg);
+        return;
+      }
 
-        // 状态更新与日志生成分离，保持更新器纯净
-        const now = new Date();
-        const timeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-        const logMessage = `[${memberName}] ${className} -> -1 ${item.unitType === 'lesson' ? t.unitLesson : t.unitSession}`;
+      const nextDoneLessons = item.doneLessons + 1;
+      const logMessage = `[${memberName}] ${className} -> -1 ${item.unitType === 'lesson' ? t.unitLesson : t.unitSession}`;
 
-        setLogs(prevLogs => [{ id: Date.now().toString(), time: timeStr, text: logMessage }, ...prevLogs]);
+      // 1. 更新云端课程表
+      const { error: updateError } = await supabase
+        .from('classes')
+        .update({ doneLessons: nextDoneLessons })
+        .eq('id', classId);
 
-        return prevClasses.map(c => c.id === classId ? { ...c, doneLessons: c.doneLessons + 1 } : c);
-      });
+      if (updateError) {
+        console.error('Update check-in failed:', updateError);
+        return;
+      }
+
+      // 2. 插入云端日志表
+      const { data: logData, error: logError } = await supabase
+        .from('logs')
+        .insert([{ text: logMessage, class_id: classId }])
+        .select();
+
+      if (logError) {
+        console.error('Insert log failed:', logError);
+        const errorMsg = `Check-in succeeded but log was not saved: ${logError.message}`;
+        if (Platform.OS === 'web') alert(errorMsg);
+        else Alert.alert('Warning', errorMsg);
+      }
+
+      // 3. 更新本地状态
+      setClasses(prev => prev.map(c => c.id === classId ? { ...c, doneLessons: nextDoneLessons } : c));
+      
+      if (logData) {
+        const newLog: LogItem = {
+          id: logData[0].id.toString(),
+          time: new Date(logData[0].created_at).toLocaleString(),
+          text: logMessage
+        };
+        setLogs(prev => [newLog, ...prev]);
+      }
     };
 
     const msg = t.confirmMsg.replace('{member}', memberName).replace('{course}', className);
@@ -100,17 +176,18 @@ export function useClasses(currentMemberId: string, members: Member[]) {
         { text: t.confirm, onPress: performAction }
       ]);
     }
-  }, [t]);
+  }, [classes, t]);
 
   return {
     classes,
     filteredClasses,
-    setClasses,
     logs,
     stats,
     handleCheckIn,
     handleAddClass,
     handleUpdateClass,
-    handleDeleteClass
+    handleDeleteClass,
+    fetchData,
+    isLoading
   };
 }
