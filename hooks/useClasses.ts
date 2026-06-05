@@ -3,6 +3,7 @@ import { Platform, Alert } from 'react-native';
 import { ClassItem, LogItem, Member } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../utils/supabase';
+import { scheduleClassReminders, cancelReminders } from '../utils/notifications';
 
 export function useClasses(currentMemberId: string, members: Member[]) {
   const { t } = useLanguage();
@@ -18,7 +19,11 @@ export function useClasses(currentMemberId: string, members: Member[]) {
     ]);
 
     if (!classesRes.error && classesRes.data) {
-      setClasses(classesRes.data);
+      const formattedClasses = classesRes.data.map((c: any) => ({
+        ...c,
+        notificationIds: c.notificationids !== undefined ? c.notificationids : c.notificationIds
+      }));
+      setClasses(formattedClasses);
     }
     if (!logsRes.error && logsRes.data) {
       // 转换 Supabase 的 created_at 为我们需要的 time 格式
@@ -65,13 +70,27 @@ export function useClasses(currentMemberId: string, members: Member[]) {
 
     if (data) {
       console.log('Class added successfully:', data[0]);
-      setClasses(prev => [...prev, data[0]]);
+      const memberName = members.find(m => m.id === classItem.memberId)?.name || '未知';
+      const ids = await scheduleClassReminders(data[0] as ClassItem, memberName);
+      
+      if (ids.length > 0) {
+        await supabase.from('classes').update({ notificationIds: ids }).eq('id', data[0].id);
+      }
+      
+      setClasses(prev => [...prev, { ...data[0], notificationIds: ids }]);
     }
-  }, []);
+  }, [members]);
 
   const handleUpdateClass = useCallback(async (id: string, data: Partial<ClassItem>) => {
     console.log('Updating class:', id, data);
-    const updateData = { ...data };
+    const oldClass = classes.find(c => c.id === id);
+    await cancelReminders(oldClass?.notificationIds);
+
+    const memberName = members.find(m => m.id === (data.memberId || oldClass?.memberId))?.name || '未知';
+    const updatedClass = { ...oldClass, ...data } as ClassItem;
+    const ids = await scheduleClassReminders(updatedClass, memberName);
+
+    const updateData = { ...data, notificationIds: ids };
     delete (updateData as any).id;
     delete (updateData as any).owner; // 确保不包含关联对象
 
@@ -87,11 +106,14 @@ export function useClasses(currentMemberId: string, members: Member[]) {
       return;
     }
 
-    setClasses(prev => prev.map(c => c.id === id ? { ...c, ...data } : c));
-  }, []);
+    setClasses(prev => prev.map(c => c.id === id ? { ...c, ...data, notificationIds: ids } : c));
+  }, [classes, members]);
 
   const handleDeleteClass = useCallback(async (id: string) => {
     console.log('Deleting class:', id);
+    const oldClass = classes.find(c => c.id === id);
+    await cancelReminders(oldClass?.notificationIds);
+
     const { error } = await supabase
       .from('classes')
       .update({ isDeleted: true })
@@ -104,7 +126,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
     }
 
     setClasses(prev => prev.map(c => c.id === id ? { ...c, isDeleted: true } : c));
-  }, []);
+  }, [classes]);
 
   const stats = useMemo(() => {
     const memberIds = new Set(members.map(m => m.id));
@@ -127,13 +149,18 @@ export function useClasses(currentMemberId: string, members: Member[]) {
         return;
       }
 
+      await cancelReminders(item.notificationIds);
+
       const nextDoneLessons = item.doneLessons + 1;
       const logMessage = `[${memberName}] ${className} -> -1 ${item.unitType === 'lesson' ? t.unitLesson : t.unitSession}`;
+
+      const updatedClass = { ...item, doneLessons: nextDoneLessons };
+      const ids = await scheduleClassReminders(updatedClass, memberName);
 
       // 1. 更新云端课程表
       const { error: updateError } = await supabase
         .from('classes')
-        .update({ doneLessons: nextDoneLessons })
+        .update({ doneLessons: nextDoneLessons, notificationIds: ids })
         .eq('id', classId);
 
       if (updateError) {
@@ -155,7 +182,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
       }
 
       // 3. 更新本地状态
-      setClasses(prev => prev.map(c => c.id === classId ? { ...c, doneLessons: nextDoneLessons } : c));
+      setClasses(prev => prev.map(c => c.id === classId ? { ...c, doneLessons: nextDoneLessons, notificationIds: ids } : c));
       
       if (logData) {
         const newLog: LogItem = {

@@ -6,9 +6,10 @@ import {
   ScrollView,
   Alert,
   Platform,
-  ActivityIndicator
+  ActivityIndicator,
+  SafeAreaView,
+  StatusBar
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 
 // UI Components
@@ -28,8 +29,15 @@ import AddClassModal from '../components/AddClassModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useMembers } from '../hooks/useMembers';
 import { useClasses } from '../hooks/useClasses';
-import { Member, ClassItem } from '../types';
+import { Member, ClassItem, ScheduleEntry } from '../types';
 import { supabase } from '../utils/supabase';
+import { requestPermissionsAsync } from '../utils/notifications';
+
+// UI Constants
+const HEADER_HEIGHT = 80;
+const WEB_PADDING = 20;
+const MOBILE_PADDING = 10;
+const HEADER_OFFSET = (Platform.OS === 'web' ? WEB_PADDING : MOBILE_PADDING) + HEADER_HEIGHT - 5; // -5px for visual optical compensation
 
 export default function App() {
   const { t } = useLanguage();
@@ -64,41 +72,45 @@ export default function App() {
   // 初始化加载云端数据
   useEffect(() => {
     const initApp = async () => {
-      const fetchedMembers = await fetchMembers();
+      await requestPermissionsAsync();
+
+      // 1. 先并行拉取基础数据
+      const [fetchedMembers] = await Promise.all([
+        fetchMembers(),
+        fetchClassesAndLogs()
+      ]);
       
-      // 如果云端 members 表为空，插入演示数据
+      // 如果云端 members 表为空，执行引导流程插入演示数据
       if (fetchedMembers && fetchedMembers.length === 0) {
         console.log('No members found. Inserting default demo data...');
         
-        // 1. 插入默认成员
+        // 2. 插入默认成员
         const { data: mData, error: mError } = await supabase
           .from('members')
           .insert([{ name: '哥哥', icon: '👦', themeColor: '#3B82F6', isDeleted: false }])
           .select();
         
         if (!mError && mData) {
-          // 重新拉取一次成员以获取 ID
-          const updatedMembers = await fetchMembers();
-          
-          if (updatedMembers && updatedMembers.length > 0) {
-            const newMemberId = updatedMembers[0].id;
-            // 2. 插入默认课程
-            await supabase.from('classes').insert([{
-              memberId: newMemberId,
-              name: '钢琴',
-              totalPrice: 5000,
-              totalLessons: 22,
-              doneLessons: 10,
-              schedule: '周一晚 18:00',
-              unitType: 'lesson',
-              isDeleted: false
-            }]);
-          }
+          const newMemberId = mData[0].id;
+          // 3. 插入默认课程 (使用 await 确保写入成功)
+          await supabase.from('classes').insert([{
+            memberId: newMemberId,
+            name: '钢琴',
+            totalPrice: 5000,
+            totalLessons: 22,
+            doneLessons: 10,
+            schedule: '周一晚 18:00',
+            unitType: 'lesson',
+            isDeleted: false
+          }]);
+
+          // 4. 全部写入成功后，再次拉取以刷新本地所有状态
+          await Promise.all([
+            fetchMembers(),
+            fetchClassesAndLogs()
+          ]);
         }
       }
-      
-      // 拉取课程和日志
-      fetchClassesAndLogs();
     };
 
     initApp();
@@ -115,7 +127,7 @@ export default function App() {
     setEditingMember(null);
   };
 
-  const onSaveClass = (data: { id?: string; name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: string; unitType: 'lesson' | 'session' }) => {
+  const onSaveClass = (data: { id?: string; name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: ScheduleEntry[]; unitType: 'lesson' | 'session' }) => {
     if (data.id) {
       handleUpdateClass(data.id, data);
     } else {
@@ -179,7 +191,8 @@ export default function App() {
 
   if (isMembersLoading || isClassesLoading) {
     return (
-      <SafeAreaView style={[styles.safeArea, styles.center]} edges={['top']}>
+      <SafeAreaView style={[styles.safeArea, styles.center]}>
+        <StatusBar barStyle="dark-content" />
         <ActivityIndicator size="large" color="#3B82F6" />
         <Text style={styles.loadingText}>Syncing with Cloud...</Text>
       </SafeAreaView>
@@ -187,64 +200,76 @@ export default function App() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScrollView 
-        style={styles.container} 
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
-      <SummaryCard stats={stats} />
-
-      <MemberTabs
-        members={members}
-        currentMemberId={currentMemberId}
-        onSelectMember={setCurrentMemberId}
-        onAddMemberPress={() => setIsAddMemberVisible(true)}
-        onLongPressMember={handleMemberLongPress}
-      />
-
-      <AddCourseBtn onPress={() => setIsAddClassVisible(true)} />
-
-      <View style={styles.listSection}>
-        {filteredClasses.length === 0 ? (
-          <Text style={styles.emptyText}>{t.noData}</Text>
-        ) : (
-          filteredClasses.map(item => (
-            <SwipeableItem
-              key={item.id}
-              onEdit={() => {
-                setEditingClass(item);
-                setIsAddClassVisible(true);
-              }}
-              onDelete={() => {
-                const msg = t.confirmDeleteMsg.replace('{course}', item.name);
-                if (Platform.OS === 'web') {
-                  if (window.confirm(msg)) handleDeleteClass(item.id);
-                } else {
-                  Alert.alert(t.confirmDeleteTitle, msg, [
-                    { text: t.cancel, style: 'cancel' },
-                    { text: t.confirm, style: 'destructive', onPress: () => handleDeleteClass(item.id) }
-                  ]);
-                }
-              }}
-            >
-              <ClassCard
-                classItem={item}
-                owner={item.owner}
-                onCheckIn={handleCheckIn}
-              />
-            </SwipeableItem>
-          ))
-        )}
-      </View>
-
-      <LogList logs={logs} />
-      </ScrollView>
-
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" translucent={true} />
+      
+      {/* 沉浸式毛玻璃头部 - 放在 ScrollView 之上以实现固定悬浮 */}
       <BlurView intensity={80} tint="light" style={styles.headerBlur}>
-        <AppHeader />
+        <View style={styles.headerContainer}>
+          <AppHeader />
+        </View>
       </BlurView>
 
+      <ScrollView 
+        style={styles.container} 
+        contentContainerStyle={[
+          styles.contentContainer,
+          { paddingTop: HEADER_OFFSET }
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <SummaryCard stats={stats} />
+
+        <MemberTabs
+          members={members}
+          currentMemberId={currentMemberId}
+          onSelectMember={setCurrentMemberId}
+          onAddMemberPress={() => {
+            console.log('app/index.tsx: Setting isAddMemberVisible to true');
+            setIsAddMemberVisible(true);
+          }}
+          onLongPressMember={handleMemberLongPress}
+        />
+
+        <AddCourseBtn onPress={() => setIsAddClassVisible(true)} />
+
+        <View style={styles.listSection}>
+          {filteredClasses.length === 0 ? (
+            <Text style={styles.emptyText}>{t.noData}</Text>
+          ) : (
+            filteredClasses.map(item => (
+              <SwipeableItem
+                key={item.id}
+                onEdit={() => {
+                  setEditingClass(item);
+                  setIsAddClassVisible(true);
+                }}
+                onDelete={() => {
+                  const msg = t.confirmDeleteMsg.replace('{course}', item.name);
+                  if (Platform.OS === 'web') {
+                    if (window.confirm(msg)) handleDeleteClass(item.id);
+                  } else {
+                    Alert.alert(t.confirmDeleteTitle, msg, [
+                      { text: t.cancel, style: 'cancel' },
+                      { text: t.confirm, style: 'destructive', onPress: () => handleDeleteClass(item.id) }
+                    ]);
+                  }
+                }}
+              >
+                <ClassCard
+                  classItem={item}
+                  owner={item.owner}
+                  onCheckIn={handleCheckIn}
+                />
+              </SwipeableItem>
+            ))
+          )}
+        </View>
+
+        <LogList logs={logs} />
+      </ScrollView>
+
+      {/* Modals */}
       <AddMemberModal
         visible={isAddMemberVisible}
         onClose={handleCloseMemberModal}
@@ -265,7 +290,9 @@ export default function App() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC'
+    backgroundColor: '#F8FAFC',
+    // 彻底解决安卓状态栏遮挡的核心逻辑
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   container: {
     flex: 1,
@@ -273,7 +300,6 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: 20,
-    paddingTop: 80,
     paddingBottom: 50,
     maxWidth: 600,
     width: '100%',
@@ -281,13 +307,18 @@ const styles = StyleSheet.create({
   },
   headerBlur: {
     position: 'absolute',
-    top: 0,
+    top: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     left: 0,
     right: 0,
     zIndex: 10,
-    paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 10,
+    paddingBottom: 15,
+  },
+  headerContainer: {
+    maxWidth: 600,
+    width: '100%',
+    marginHorizontal: 'auto',
+    paddingHorizontal: 20,
   },
   center: {
     justifyContent: 'center',
