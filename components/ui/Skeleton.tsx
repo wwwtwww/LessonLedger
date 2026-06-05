@@ -13,7 +13,7 @@ export default function Skeleton({ style }: { style?: ViewStyle }) {
 
   useEffect(() => {
     opacity.value = withRepeat(withTiming(0.7, { duration: 800 }), -1, true);
-  }, []);
+  }, [opacity]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,

@@ -49,6 +49,7 @@ export default function DashboardPage() {
     logs,
     stats,
     isLoading,
+    themeColor,
     handleAddMember,
     handleUpdateMember,
     handleDeleteMember,
