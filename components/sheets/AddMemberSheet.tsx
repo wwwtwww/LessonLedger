@@ -10,10 +10,10 @@ import {
   Alert,
 } from 'react-native';
 import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
-import { useLanguage } from '../contexts/LanguageContext';
-import { Member } from '../types';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { Member } from '../../types';
 
-interface AddMemberModalProps {
+interface AddMemberSheetProps {
   visible: boolean;
   onClose: () => void;
   onAdd: (data: Partial<Member> & { name: string; icon: string; themeColor: string }) => void;
@@ -22,7 +22,7 @@ interface AddMemberModalProps {
 
 const PREDEFINED_COLORS = ['#3B82F6', '#EC4899', '#10B981', '#F59E0B', '#8B5CF6'];
 
-export default function AddMemberModal({ visible, onClose, onAdd, initialData }: AddMemberModalProps) {
+export default function AddMemberSheet({ visible, onClose, onAdd, initialData }: AddMemberSheetProps) {
   const { t } = useLanguage();
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('');

@@ -9,11 +9,11 @@ import {
   Modal,
 } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
-import { useLanguage } from '../contexts/LanguageContext';
-import { Member, ClassItem, ScheduleEntry } from '../types';
-import SchedulePicker from './ui/SchedulePicker';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { Member, ClassItem, ScheduleEntry } from '../../types';
+import SchedulePicker from '../ui/SchedulePicker';
 
-interface AddClassModalProps {
+interface AddClassSheetProps {
   visible: boolean;
   onClose: () => void;
   onAdd: (data: Partial<ClassItem> & { name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: ScheduleEntry[]; unitType: 'lesson' | 'session' }) => void;
@@ -21,7 +21,7 @@ interface AddClassModalProps {
   initialData?: ClassItem | null;
 }
 
-export default function AddClassModal({ visible, onClose, onAdd, members, initialData }: AddClassModalProps) {
+export default function AddClassSheet({ visible, onClose, onAdd, members, initialData }: AddClassSheetProps) {
   const { lang, t } = useLanguage();
   const [name, setName] = useState('');
   const [memberId, setMemberId] = useState('');

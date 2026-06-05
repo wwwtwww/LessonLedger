@@ -13,18 +13,17 @@ import {
 import { BlurView } from 'expo-blur';
 
 // UI Components
-import AppHeader from '../components/ui/AppHeader';
-import SummaryCard from '../components/ui/SummaryCard';
-import MemberTabs from '../components/ui/MemberTabs';
-import AddCourseBtn from '../components/ui/AddCourseBtn';
-import ClassCard from '../components/ui/ClassCard';
-import LogList from '../components/ui/LogList';
+import AppHeader from '../components/ui/AppHeader';        
+import SummaryCard from '../components/dashboard/SummaryCard';    
+import MemberTabs from '../components/dashboard/MemberTabs';      
+import AddCourseBtn from '../components/ui/AddCourseBtn';  
+import ClassCard from '../components/classes/ClassCard';        
+import LogList from '../components/logs/LogList';
 import SwipeableItem from '../components/ui/SwipeableItem';
 
 // Modals
-import AddMemberModal from '../components/AddMemberModal';
-import AddClassModal from '../components/AddClassModal';
-
+import AddMemberSheet from '../components/sheets/AddMemberSheet'; 
+import AddClassSheet from '../components/sheets/AddClassSheet';   
 // Hooks & Contexts
 import { useLanguage } from '../contexts/LanguageContext';
 import { useMembers } from '../hooks/useMembers';
@@ -270,13 +269,13 @@ export default function App() {
       </ScrollView>
 
       {/* Modals */}
-      <AddMemberModal
+      <AddMemberSheet
         visible={isAddMemberVisible}
         onClose={handleCloseMemberModal}
         onAdd={onSaveMember}
         initialData={editingMember}
       />
-      <AddClassModal
+      <AddClassSheet
         visible={isAddClassVisible}
         onClose={handleCloseClassModal}
         onAdd={onSaveClass}
