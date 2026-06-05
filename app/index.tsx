@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import GlassHeader from '../components/ui/GlassHeader';
 import AppHeader from '../components/ui/AppHeader';
 import SummaryCard from '../components/dashboard/SummaryCard';
-import MemberTabs from '../components/dashboard/MemberTabs';
+import MemberSwitcher from '../components/dashboard/MemberSwitcher';
 import AddCourseBtn from '../components/ui/AddCourseBtn';
 import ClassCard from '../components/classes/ClassCard';
 import LogList from '../components/logs/LogList';
@@ -120,7 +120,7 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <View style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <ActivityIndicator size="large" color={themeColor || COLORS.primary} />
         <Text style={styles.loadingText}>Syncing with Cloud...</Text>
       </View>
     );
@@ -128,10 +128,14 @@ export default function DashboardPage() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <StatusBar 
+        barStyle="dark-content" 
+        backgroundColor="transparent" 
+        translucent 
+      />
 
       <GlassHeader>
-        <AppHeader />
+        <AppHeader themeColor={themeColor} />
       </GlassHeader>
 
       <ScrollView
@@ -142,17 +146,20 @@ export default function DashboardPage() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <SummaryCard stats={stats} />
+        <SummaryCard stats={stats} themeColor={themeColor} />
 
-        <MemberTabs
+        <MemberSwitcher
           members={members}
-          currentMemberId={currentMemberId}
-          onSelectMember={setCurrentMemberId}
-          onAddMemberPress={() => setIsAddMemberVisible(true)}
-          onLongPressMember={handleMemberLongPress}
+          currentId={currentMemberId}
+          onSelect={setCurrentMemberId}
+          onAddPress={() => setIsAddMemberVisible(true)}
+          onLongPress={handleMemberLongPress}
         />
 
-        <AddCourseBtn onPress={() => setIsAddClassVisible(true)} />
+        <AddCourseBtn 
+          onPress={() => setIsAddClassVisible(true)} 
+          color={themeColor}
+        />
 
         <View style={styles.listSection}>
           {filteredClasses.length === 0 ? (

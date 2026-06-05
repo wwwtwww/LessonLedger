@@ -4,13 +4,17 @@ import { useLanguage } from '../../contexts/LanguageContext';
 
 interface AddCourseBtnProps {
   onPress: () => void;
+  color?: string;
 }
 
-const AddCourseBtn: React.FC<AddCourseBtnProps> = ({ onPress }) => {
+const AddCourseBtn: React.FC<AddCourseBtnProps> = ({ onPress, color }) => {
   const { t } = useLanguage();
 
   return (
-    <TouchableOpacity style={styles.addCourseBtn} onPress={onPress}>
+    <TouchableOpacity 
+      style={[styles.addCourseBtn, color ? { backgroundColor: color } : null]} 
+      onPress={onPress}
+    >
       <Text style={styles.addCourseBtnText}>+ {t.addCourse}</Text>
     </TouchableOpacity>
   );

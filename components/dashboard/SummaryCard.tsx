@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { COLORS } from '../../utils/colors';
 
 interface SummaryCardProps {
   stats: {
@@ -8,19 +9,20 @@ interface SummaryCardProps {
     totalClasses: number;
     totalRemaining: number;
   };
+  themeColor?: string;
 }
 
-const SummaryCard: React.FC<SummaryCardProps> = ({ stats }) => {
+const SummaryCard: React.FC<SummaryCardProps> = ({ stats, themeColor }) => {
   const { lang, t } = useLanguage();
   const { totalSpent, totalClasses, totalRemaining } = stats;
 
   return (
-    <View style={styles.summaryCard}>
+    <View style={[styles.summaryCard, themeColor ? { borderColor: themeColor + '40' } : null]}>
       <View style={styles.summaryItem}>
         <Text style={styles.summaryNum}>{lang === 'zh-CN' ? '￥' : '$'}{totalSpent}</Text>
         <Text style={styles.summaryLabel}>{t.totalInvestment}</Text>
       </View>
-      <View style={[styles.summaryItem, styles.summaryBorder]}>
+      <View style={[styles.summaryItem, styles.summaryBorder, themeColor ? { borderColor: themeColor + '40' } : null]}>
         <Text style={styles.summaryNum}>{totalClasses}</Text>
         <Text style={styles.summaryLabel}>{t.activeProjects}</Text>
       </View>
@@ -33,14 +35,17 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ stats }) => {
 };
 
 const styles = StyleSheet.create({
-  summaryCard: { 
-    backgroundColor: '#1E293B', 
-    borderRadius: 20, 
-    padding: 20, 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    marginBottom: 20 
+  summaryCard: {
+    backgroundColor: '#1E293B',
+    borderRadius: 20,
+    padding: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
+
   summaryItem: { flex: 1, alignItems: 'center' },
   summaryBorder: { 
     borderLeftWidth: 1, 

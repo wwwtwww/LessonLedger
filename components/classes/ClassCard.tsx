@@ -1,9 +1,10 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert, Platform } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { ClassItem, Member } from '../../types';
 import { formatSchedule } from '../../utils/formatters';
+import { triggerHaptic } from '../../utils/haptics';
+import { COLORS } from '../../utils/colors';
 
 interface ClassCardProps {
   classItem: ClassItem;
@@ -15,15 +16,15 @@ const ClassCard: React.FC<ClassCardProps> = ({ classItem, owner, onCheckIn }) =>
   const { t, lang } = useLanguage();
   const ownerName = owner?.name || '未知';
   const ownerIcon = owner?.icon || '👤';
-  const themeColor = owner?.themeColor || '#94A3B8';
+  const themeColor = owner?.themeColor || COLORS.primary;
 
   const isCompleted = classItem.doneLessons >= classItem.totalLessons;
-  const progress = classItem.totalLessons > 0 
-    ? Math.min(classItem.doneLessons / classItem.totalLessons, 1) 
+  const progress = classItem.totalLessons > 0
+    ? Math.min(classItem.doneLessons / classItem.totalLessons, 1)
     : 0;
 
   const handleCheckInPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    triggerHaptic('light');
     if (isCompleted) {
       const errorMsg = t.noRemainingError;
       if (Platform.OS === 'web') alert(errorMsg);
@@ -32,7 +33,6 @@ const ClassCard: React.FC<ClassCardProps> = ({ classItem, owner, onCheckIn }) =>
     }
     onCheckIn(classItem.id, classItem.name, ownerName);
   };
-
   const unitText = classItem.unitType === 'lesson' ? t.unitLesson : t.unitSession;
   const costPerUnit = classItem.totalLessons > 0 
     ? (classItem.totalPrice / classItem.totalLessons).toFixed(1) 

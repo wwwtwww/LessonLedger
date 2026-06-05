@@ -2,8 +2,8 @@ import React, { useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { triggerHaptic } from '../../utils/haptics';
 
 interface SwipeableItemProps {
   children: React.ReactNode;
@@ -16,13 +16,13 @@ const SwipeableItem: React.FC<SwipeableItemProps> = ({ children, onEdit, onDelet
   const swipeableRef = useRef<Swipeable>(null);
 
   const handleEdit = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    triggerHaptic('light');
     swipeableRef.current?.close();
     onEdit();
   }, [onEdit]);
 
   const handleDelete = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    triggerHaptic('medium');
     swipeableRef.current?.close();
     onDelete();
   }, [onDelete]);
@@ -68,7 +68,7 @@ const SwipeableItem: React.FC<SwipeableItemProps> = ({ children, onEdit, onDelet
   );
 
   const onSwipeableWillOpen = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    triggerHaptic('light');
   }, []);
 
   return (
