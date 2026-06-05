@@ -10,23 +10,24 @@ import {
 } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Member, ClassItem } from '../types';
+import { Member, ClassItem, ScheduleEntry } from '../types';
+import SchedulePicker from './ui/SchedulePicker';
 
 interface AddClassModalProps {
   visible: boolean;
   onClose: () => void;
-  onAdd: (data: Partial<ClassItem> & { name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: string; unitType: 'lesson' | 'session' }) => void;
+  onAdd: (data: Partial<ClassItem> & { name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: ScheduleEntry[]; unitType: 'lesson' | 'session' }) => void;
   members: Member[];
   initialData?: ClassItem | null;
 }
 
 export default function AddClassModal({ visible, onClose, onAdd, members, initialData }: AddClassModalProps) {
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const [name, setName] = useState('');
   const [memberId, setMemberId] = useState('');
   const [totalPrice, setTotalPrice] = useState('');
   const [totalLessons, setTotalLessons] = useState('');
-  const [schedule, setSchedule] = useState('');
+  const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
   const [unitType, setUnitType] = useState<'lesson' | 'session'>('lesson');
   const [error, setError] = useState('');
   const prevVisible = useRef(visible);
@@ -60,14 +61,21 @@ export default function AddClassModal({ visible, onClose, onAdd, members, initia
         setMemberId(initialData.memberId);
         setTotalPrice(initialData.totalPrice.toString());
         setTotalLessons(initialData.totalLessons.toString());
-        setSchedule(initialData.schedule);
         setUnitType(initialData.unitType || 'lesson');
+        
+        let parsedSchedule: ScheduleEntry[] = [];
+        if (typeof initialData.schedule === 'string') {
+          parsedSchedule = [{ type: 'specific', time: initialData.schedule }];
+        } else if (Array.isArray(initialData.schedule)) {
+          parsedSchedule = initialData.schedule;
+        }
+        setSchedule(parsedSchedule);
       } else {
         setName('');
         setMemberId(members.length > 0 ? members[0].id : '');
         setTotalPrice('');
         setTotalLessons('');
-        setSchedule('');
+        setSchedule([]);
         setUnitType('lesson');
       }
       setError('');
@@ -87,7 +95,7 @@ export default function AddClassModal({ visible, onClose, onAdd, members, initia
       memberId,
       totalPrice: Number(totalPrice),
       totalLessons: Number(totalLessons),
-      schedule: schedule.trim(),
+      schedule,
       unitType,
     });
   };
@@ -365,12 +373,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 5,
     backgroundColor: '#E2E8F0',
-    borderRadius: 3,
-    alignSelf: 'center',
-    marginTop: 10,
-    marginBottom: 5,
-  },
-});ackgroundColor: '#E2E8F0',
     borderRadius: 3,
     alignSelf: 'center',
     marginTop: 10,

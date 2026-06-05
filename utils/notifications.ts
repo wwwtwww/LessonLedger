@@ -6,6 +6,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -74,7 +76,10 @@ export async function scheduleClassReminders(classItem: ClassItem, memberName: s
           body: `${memberName} 的 ${classItem.name} 将在 ${entry.time} 开始，不要迟到哦！（剩余: ${classItem.totalLessons - classItem.doneLessons}次）`,
           data: { classId: classItem.id },
         },
-        trigger: triggerDate,
+        trigger: {
+          type: 'date',
+          date: triggerDate,
+        } as Notifications.NotificationTriggerInput,
       });
       notificationIds.push(id);
     }

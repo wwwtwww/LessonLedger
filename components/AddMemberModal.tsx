@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
+  Modal,
   Alert,
 } from 'react-native';
 import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
@@ -32,11 +33,15 @@ export default function AddMemberModal({ visible, onClose, onAdd, initialData }:
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ['75%'], []);
 
+  // Native Side: Sync BottomSheet
   useEffect(() => {
-    if (visible) {
-      bottomSheetModalRef.current?.present();
-    } else {
-      bottomSheetModalRef.current?.dismiss();
+    if (Platform.OS !== 'web') {
+      if (visible) {
+        Alert.alert('Debug', 'AddMemberModal is trying to present BottomSheet');
+        bottomSheetModalRef.current?.present();
+      } else {
+        bottomSheetModalRef.current?.dismiss();
+      }
     }
   }, [visible]);
 
@@ -79,6 +84,90 @@ export default function AddMemberModal({ visible, onClose, onAdd, initialData }:
     });
   };
 
+  const renderFormContent = () => (
+    <View style={styles.modalContent}>
+      <Text style={styles.title}>
+        {initialData ? t.editMemberTitle : t.addMemberTitle}
+      </Text>
+        
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>{t.nameLabel || 'Name'}</Text>
+        <TextInput
+          style={[styles.input, error ? styles.inputError : null]}
+          value={name}
+          onChangeText={(text) => {
+            setName(text);
+            setError('');
+          }}
+          placeholder={t.namePlaceholder || 'Enter member name'}
+          placeholderTextColor="#9ca3af"
+        />
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      </View>
+
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>{t.iconLabel || 'Icon (Emoji)'}</Text>
+        <TextInput
+          style={styles.input}
+          value={icon}
+          onChangeText={setIcon}
+          placeholder={t.iconPlaceholder || '👤'}
+          placeholderTextColor="#9ca3af"
+          maxLength={2}
+        />
+      </View>
+
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>{t.themeColorLabel || 'Theme Color'}</Text>
+        <View style={styles.colorPicker}>
+          {PREDEFINED_COLORS.map((color) => (
+            <TouchableOpacity
+              key={color}
+              style={[
+                styles.colorCircle,
+                { backgroundColor: color },
+                themeColor === color && styles.colorSelected,
+              ]}
+              onPress={() => setThemeColor(color)}
+            />
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.actions}>
+        <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onClose}>
+          <Text style={styles.cancelButtonText}>{t.cancel || 'Cancel'}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.button, styles.addButton]} onPress={handleAdd}>
+          <Text style={styles.addButtonText}>
+            {initialData ? t.save : t.add}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  // Web Fallback
+  if (Platform.OS === 'web') {
+    return (
+      <Modal
+        visible={visible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={onClose}
+      >
+        <View style={styles.webOverlay}>
+          <TouchableOpacity style={styles.webDismissArea} activeOpacity={1} onPress={onClose} />
+          <View style={styles.webSheet}>
+            <View style={styles.webHandle} />
+            {renderFormContent()}
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
+  // Native: BottomSheet
   return (
     <BottomSheetModal
       ref={bottomSheetModalRef}
@@ -88,65 +177,8 @@ export default function AddMemberModal({ visible, onClose, onAdd, initialData }:
       backdropComponent={renderBackdrop}
       keyboardBlurBehavior="restore"
     >
-      <BottomSheetView style={styles.modalContent}>
-        <Text style={styles.title}>
-          {initialData ? t.editMemberTitle : t.addMemberTitle}
-        </Text>
-          
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>{t.nameLabel || 'Name'}</Text>
-          <TextInput
-            style={[styles.input, error ? styles.inputError : null]}
-            value={name}
-            onChangeText={(text) => {
-              setName(text);
-              setError('');
-            }}
-            placeholder={t.namePlaceholder || 'Enter member name'}
-            placeholderTextColor="#9ca3af"
-          />
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>{t.iconLabel || 'Icon (Emoji)'}</Text>
-          <TextInput
-            style={styles.input}
-            value={icon}
-            onChangeText={setIcon}
-            placeholder={t.iconPlaceholder || '👤'}
-            placeholderTextColor="#9ca3af"
-            maxLength={2}
-          />
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>{t.themeColorLabel || 'Theme Color'}</Text>
-          <View style={styles.colorPicker}>
-            {PREDEFINED_COLORS.map((color) => (
-              <TouchableOpacity
-                key={color}
-                style={[
-                  styles.colorCircle,
-                  { backgroundColor: color },
-                  themeColor === color && styles.colorSelected,
-                ]}
-                onPress={() => setThemeColor(color)}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.actions}>
-          <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onClose}>
-            <Text style={styles.cancelButtonText}>{t.cancel || 'Cancel'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.button, styles.addButton]} onPress={handleAdd}>
-            <Text style={styles.addButtonText}>
-              {initialData ? t.save : t.add}
-            </Text>
-          </TouchableOpacity>
-        </View>
+      <BottomSheetView style={{ flex: 1 }}>
+        {renderFormContent()}
       </BottomSheetView>
     </BottomSheetModal>
   );
@@ -154,7 +186,6 @@ export default function AddMemberModal({ visible, onClose, onAdd, initialData }:
 
 const styles = StyleSheet.create({
   modalContent: {
-    flex: 1,
     paddingHorizontal: 24,
     paddingBottom: 24,
     paddingTop: 8,
@@ -237,5 +268,31 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Web Specific Styles
+  webOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  webDismissArea: {
+    flex: 1,
+  },
+  webSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    width: '100%',
+    maxWidth: 600,
+    alignSelf: 'center',
+  },
+  webHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 5,
   },
 });

@@ -74,7 +74,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
       const ids = await scheduleClassReminders(data[0] as ClassItem, memberName);
       
       if (ids.length > 0) {
-        await supabase.from('classes').update({ notificationIds: ids }).eq('id', data[0].id);
+        await supabase.from('classes').update({ notificationids: ids }).eq('id', data[0].id);
       }
       
       setClasses(prev => [...prev, { ...data[0], notificationIds: ids }]);

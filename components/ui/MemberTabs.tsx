@@ -89,7 +89,10 @@ const MemberTabs: React.FC<MemberTabsProps> = ({
       ))}
       <TouchableOpacity 
         style={[styles.memberTab, styles.addMemberTab]} 
-        onPress={onAddMemberPress}
+        onPress={() => {
+          console.log('MemberTabs: Add Member pressed');
+          onAddMemberPress();
+        }}
       >
         <Text style={styles.addMemberTabText}>+ {t.addMember}</Text>
       </TouchableOpacity>

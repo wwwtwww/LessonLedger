@@ -1,93 +1,115 @@
 import React from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-} from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, Platform } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { Member, ClassItem } from '../../types';
+import { ClassItem, Member } from '../../types';
 import { formatSchedule } from '../../utils/formatters';
 
 interface ClassCardProps {
   classItem: ClassItem;
-  owner: Member | undefined;
+  owner?: Member;
   onCheckIn: (classId: string, className: string, memberName: string) => void;
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({ classItem, owner, onCheckIn }) => {
   const { t, lang } = useLanguage();
+  const ownerName = owner?.name || '未知';
+  const ownerIcon = owner?.icon || '👤';
+  const themeColor = owner?.themeColor || '#94A3B8';
 
-  const remaining = classItem.totalLessons - classItem.doneLessons;
-  const progress = (classItem.doneLessons / classItem.totalLessons) * 100;
-  const costPerUnit = (classItem.totalPrice / classItem.totalLessons).toFixed(1);
-  const unitLabel = classItem.unitType === 'lesson' ? t.unitLesson : t.unitSession;
+  const isCompleted = classItem.doneLessons >= classItem.totalLessons;
+  const progress = classItem.totalLessons > 0 
+    ? Math.min(classItem.doneLessons / classItem.totalLessons, 1) 
+    : 0;
 
-  // 低余额红灯预警判定 (剩余 <= 3 亮猩红灯)
-  const isWarning = remaining <= 3 && remaining > 0;
-  const isDone = remaining === 0;
+  const handleCheckInPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (isCompleted) {
+      const errorMsg = t.noRemainingError;
+      if (Platform.OS === 'web') alert(errorMsg);
+      else Alert.alert('', errorMsg);
+      return;
+    }
+    onCheckIn(classItem.id, classItem.name, ownerName);
+  };
+
+  const unitText = classItem.unitType === 'lesson' ? t.unitLesson : t.unitSession;
+  const costPerUnit = classItem.totalLessons > 0 
+    ? (classItem.totalPrice / classItem.totalLessons).toFixed(1) 
+    : '0';
 
   return (
-    <View key={classItem.id} style={[styles.classCard, isWarning && styles.classCardWarning]}>
+    <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <View style={styles.titleGroup}>
+        <View style={styles.titleArea}>
           <Text style={styles.className}>{classItem.name}</Text>
-          <Text style={[styles.memberBadge, { backgroundColor: owner?.themeColor + '20', color: owner?.themeColor }]}>
-            {owner?.icon} {owner?.name}
+          <View style={[styles.ownerTag, { backgroundColor: themeColor + '20' }]}>
+            <Text style={[styles.ownerTagText, { color: themeColor }]}>
+              {ownerIcon} {ownerName}
+            </Text>
+          </View>
+        </View>
+        <Text style={styles.costInfo}>￥{costPerUnit} / {unitText}</Text>
+      </View>
+
+      <View style={styles.scheduleRow}>
+        <Text style={styles.scheduleText}>
+          🕒 {t.schedule}: {formatSchedule(classItem.schedule, lang as 'zh-CN' | 'en-US')}
+        </Text>
+      </View>
+
+      <View style={styles.progressSection}>
+        <View style={styles.progressLabels}>
+          <Text style={styles.progressText}>
+            {t.alreadyUp} <Text style={styles.highlight}>{classItem.doneLessons}</Text> / {t.total} {classItem.totalLessons}
+          </Text>
+          <Text style={styles.remainingText}>
+            {t.remain} <Text style={styles.highlight}>{classItem.totalLessons - classItem.doneLessons}</Text> {unitText}
           </Text>
         </View>
-        <Text style={styles.classCost}>{lang === 'zh-CN' ? '￥' : '$'}{costPerUnit} / {unitLabel}</Text>
+        <View style={styles.progressBarBg}>
+          <View 
+            style={[
+              styles.progressBarFill, 
+              { width: `${progress * 100}%`, backgroundColor: isCompleted ? '#10B981' : themeColor }
+            ]} 
+          />
+        </View>
       </View>
 
-      <Text style={styles.classTime}>🕒 {t.schedule}: {formatSchedule(classItem.schedule, lang)}</Text>
-
-      <View style={styles.lessonInfoRow}>
-        <Text style={styles.lessonText}>
-          {t.alreadyUp} <Text style={styles.boldText}>{classItem.doneLessons}</Text> / {t.total} {classItem.totalLessons}
-        </Text>
-        <Text style={styles.lessonText}>
-          {t.remain} <Text style={[styles.boldText, isWarning && styles.warningText]}>{remaining}</Text> {unitLabel}
-        </Text>
-      </View>
-
-      {/* 进度条 */}
-      <View style={styles.progressBarBg}>
-        <View style={[styles.progressBarFill, { width: `${progress}%` }, isWarning && { backgroundColor: '#EF4444' }]} />
-      </View>
-
-      {/* 打卡按钮 */}
       <TouchableOpacity 
-        style={[styles.checkInBtn, { backgroundColor: owner?.themeColor }, isDone && styles.disabledBtn]} 
-        onPress={() => onCheckIn(classItem.id, classItem.name, owner?.name || '')}
-        disabled={isDone}
+        style={[styles.checkInBtn, isCompleted && styles.checkInBtnDisabled]} 
+        onPress={handleCheckInPress}
+        disabled={isCompleted}
       >
-        <Text style={styles.checkInBtnText}>{isDone ? t.btnCompleted : t.btnCheckIn}</Text>
+        <Text style={styles.checkInBtnText}>
+          {isCompleted ? t.btnCompleted : t.btnCheckIn}
+        </Text>
       </TouchableOpacity>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  classCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0', shadowColor: '#0F172A', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 4, elevation: 2 },
-  classCardWarning: { borderColor: '#EF4444', shadowColor: '#EF4444', shadowOpacity: 0.08 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  titleGroup: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  className: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
-  memberBadge: { fontSize: 11, fontWeight: '700', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, overflow: 'hidden' },
-  classCost: { fontSize: 13, fontWeight: '600', color: '#64748B' },
-  classTime: { fontSize: 13, color: '#64748B', marginBottom: 12 },
-  lessonInfoRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  lessonText: { fontSize: 13, color: '#475569' },
-  boldText: { fontWeight: 'bold', color: '#0F172A' },
-  warningText: { color: '#EF4444', fontWeight: '900' },
-  progressBarBg: { height: 6, backgroundColor: '#E2E8F0', borderRadius: 3, marginBottom: 14, overflow: 'hidden' },
-  progressBarFill: { height: '100%', backgroundColor: '#10B981', borderRadius: 3 },
-  checkInBtn: { borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
-  disabledBtn: { backgroundColor: '#CBD5E1' },
-  checkInBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-});
-
-export default ClassCard;},
+  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#F1F5F9', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
+  titleArea: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
+  className: { fontSize: 18, fontWeight: 'bold', color: '#0F172A' },
+  ownerTag: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 },
+  ownerTagText: { fontSize: 12, fontWeight: '600' },
+  costInfo: { fontSize: 12, color: '#64748B', fontWeight: '500', marginTop: 4 },
+  scheduleRow: { marginBottom: 12 },
+  scheduleText: { fontSize: 13, color: '#475569' },
+  progressSection: { marginBottom: 16 },
+  progressLabels: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  progressText: { fontSize: 13, color: '#64748B' },
+  remainingText: { fontSize: 13, color: '#64748B', fontWeight: '500' },
+  highlight: { color: '#0F172A', fontWeight: 'bold' },
+  progressBarBg: { height: 6, backgroundColor: '#F1F5F9', borderRadius: 3, overflow: 'hidden' },
+  progressBarFill: { height: '100%', borderRadius: 3 },
+  checkInBtn: { backgroundColor: '#3B82F6', paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
+  checkInBtnDisabled: { backgroundColor: '#10B981' },
+  checkInBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: 'bold' },
 });
 
 export default ClassCard;
