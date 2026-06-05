@@ -20,6 +20,7 @@ import AddCourseBtn from '../components/ui/AddCourseBtn';
 import ClassCard from '../components/classes/ClassCard';
 import LogList from '../components/logs/LogList';
 import SwipeableItem from '../components/ui/SwipeableItem';
+import EmptyState from '../components/ui/EmptyState';
 
 // Sheets (Modals)
 import AddMemberSheet from '../components/sheets/AddMemberSheet';
@@ -155,7 +156,7 @@ export default function DashboardPage() {
 
         <View style={styles.listSection}>
           {filteredClasses.length === 0 ? (
-            <Text style={styles.emptyText}>{t.noData}</Text>
+            <EmptyState title={t.noData} icon="📚" />
           ) : (
             filteredClasses.map(item => (
               <SwipeableItem
@@ -215,10 +216,5 @@ const styles = StyleSheet.create({
   },
   listSection: {
     marginBottom: 20
-  },
-  emptyText: {
-    textAlign: 'center',
-    color: COLORS.textLight,
-    padding: 20
   },
 });
