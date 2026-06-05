@@ -48,6 +48,7 @@ export default function DashboardPage() {
     logs,
     stats,
     isLoading,
+    themeColor,
     handleAddMember,
     handleUpdateMember,
     handleDeleteMember,
@@ -119,7 +120,7 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <View style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <ActivityIndicator size="large" color={themeColor} />
         <Text style={styles.loadingText}>Syncing with Cloud...</Text>
       </View>
     );
@@ -151,7 +152,10 @@ export default function DashboardPage() {
           onLongPressMember={handleMemberLongPress}
         />
 
-        <AddCourseBtn onPress={() => setIsAddClassVisible(true)} />
+        <AddCourseBtn 
+          onPress={() => setIsAddClassVisible(true)} 
+          color={themeColor}
+        />
 
         <View style={styles.listSection}>
           {filteredClasses.length === 0 ? (

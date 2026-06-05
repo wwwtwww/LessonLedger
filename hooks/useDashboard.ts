@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useMembers } from './useMembers';
 import { useClasses } from './useClasses';
+import { COLORS } from '../utils/colors';
 
 export function useDashboard() {
   const memberHook = useMembers();
@@ -29,6 +30,10 @@ export function useDashboard() {
     members.find(m => m.id === currentMemberId) || null
   , [members, currentMemberId]);
 
+  const themeColor = useMemo(() => 
+    activeMember?.themeColor || COLORS.primary
+  , [activeMember]);
+
   // 聚合职责：将底层 Hook 的状态和动作统一导出，保持简洁并避免重复逻辑
   return {
     ...memberHook,
@@ -36,6 +41,7 @@ export function useDashboard() {
     classes: filteredClasses, // 覆盖原始 classes，导出过滤后的结果
     stats: dashboardStats,    // 导出针对当前视图计算的统计数据
     activeMember,
+    themeColor,
     isLoading: memberHook.isLoading || classHook.isLoading
   };
 }
