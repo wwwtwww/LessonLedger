@@ -14,14 +14,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // UI Components
 import GlassHeader from '../components/ui/GlassHeader';
 import AppHeader from '../components/ui/AppHeader';
-import SummaryCard from '../components/dashboard/SummaryCard';      
-import MemberSwitcher from '../components/dashboard/MemberSwitcher';
-import ExpensePieChart from '../components/dashboard/ExpensePieChart';
+import SummaryCard from '../components/dashboard/SummaryCard';        
+import MemberSwitcher from '../components/dashboard/MemberSwitcher';  
 import AddCourseBtn from '../components/ui/AddCourseBtn';
-import ClassCard from '../components/classes/ClassCard';
 import LogList from '../components/logs/LogList';
-import SwipeableItem from '../components/ui/SwipeableItem';
-import EmptyState from '../components/ui/EmptyState';
 
 // Sheets (Modals)
 import AddMemberSheet from '../components/sheets/AddMemberSheet';   
@@ -167,30 +163,6 @@ export default function DashboardPage() {
           color={themeColor}
         />
 
-        {filteredClasses.length > 0 && (
-          <ExpensePieChart classes={filteredClasses} themeColor={themeColor || COLORS.primary} />
-        )}
-
-        <View style={styles.listSection}>
-          {filteredClasses.length === 0 ? (
-            <EmptyState title={t.noData} icon="📚" />
-          ) : (
-            filteredClasses.map(item => (
-              <SwipeableItem
-                key={item.id}
-                onEdit={() => { setEditingClass(item); setIsAddClassVisible(true); }}
-                onDelete={() => handleDeleteClass(item.id)}
-              >
-                <ClassCard
-                  classItem={item}
-                  owner={item.owner}
-                  onCheckIn={handleCheckIn}
-                />
-              </SwipeableItem>
-            ))
-          )}
-        </View>
-
         <LogList logs={logs} />
       </ScrollView>
 
@@ -221,7 +193,7 @@ const styles = StyleSheet.create({
     paddingBottom: 50,
     maxWidth: 600,
     width: '100%',
-    marginHorizontal: 'auto'
+    alignSelf: 'center',
   },
   center: {
     justifyContent: 'center',
@@ -230,8 +202,5 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     color: COLORS.textLight,
-  },
-  listSection: {
-    marginBottom: 20
   },
 });

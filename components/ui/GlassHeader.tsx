@@ -22,9 +22,9 @@ export default function GlassHeader({ children }: GlassHeaderProps) {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>    
       <BlurView
-        intensity={Platform.OS === 'ios' ? 80 : 100}
+        intensity={Platform.OS === 'ios' ? 90 : 100}
         tint="light"
         style={StyleSheet.absoluteFill}
       />
