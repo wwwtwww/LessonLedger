@@ -14,12 +14,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // UI Components
 import GlassHeader from '../components/ui/GlassHeader';
 import AppHeader from '../components/ui/AppHeader';
-import SummaryCard from '../components/dashboard/SummaryCard';        
-import MemberSwitcher from '../components/dashboard/MemberSwitcher';  
+import FitnessSummaryCards from '../components/dashboard/FitnessSummaryCards';
+import MemberSwitcher from '../components/dashboard/MemberSwitcher';
 import AddCourseBtn from '../components/ui/AddCourseBtn';
 import LogList from '../components/logs/LogList';
 
 // Sheets (Modals)
+
 import AddMemberSheet from '../components/sheets/AddMemberSheet';   
 import AddClassSheet from '../components/sheets/AddClassSheet';     
 
@@ -148,7 +149,7 @@ export default function DashboardPage() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <SummaryCard stats={stats} themeColor={themeColor} />
+        <FitnessSummaryCards stats={stats} themeColor={themeColor} />
 
         <MemberSwitcher
           members={members}
