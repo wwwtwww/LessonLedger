@@ -12,17 +12,16 @@ const AppHeader: React.FC<AppHeaderProps> = ({ themeColor }) => {
 
   return (
     <View style={styles.topBar}>
-      {/* 左侧：标题与副标题 */}
+      {/* 左侧：极简标题，单行排版 */}
       <View style={styles.titleGroup}>
-        <Text style={styles.appTitle}>{t.title}</Text>
-        <Text style={[styles.appSubTitle, themeColor ? { color: themeColor } : null]}>
-          {t.subTitle}
+        <Text style={[styles.appTitle, themeColor ? { color: themeColor } : null]}>
+          {t.title}
         </Text>
       </View>
 
-      {/* 右侧：语言切换按钮 */}
-      <TouchableOpacity 
-        style={[styles.langBtn, themeColor ? { borderColor: themeColor } : null]} 
+      {/* 右侧：语言切换按钮 (纯线性极简风格) */}
+      <TouchableOpacity
+        style={[styles.langBtn, themeColor ? { borderColor: themeColor } : null]}     
         onPress={toggleLang}
       >
         <Text style={styles.langBtnText}>🌐 {t.switchLang}</Text>
@@ -30,6 +29,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ themeColor }) => {
     </View>
   );
 };
+
 const styles = StyleSheet.create({
   topBar: {
     flex: 1,
@@ -38,40 +38,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   titleGroup: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   appTitle: {
-    fontSize: 22,
-    fontWeight: '900',
+    fontSize: 18,
+    fontWeight: '500',
     color: COLORS.text,
-    textAlign: 'left',
-  },
-  appSubTitle: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: COLORS.textLight,
-    textAlign: 'left',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: -0.2,
   },
   langBtn: {
-    backgroundColor: COLORS.white,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 18,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: COLORS.border,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
   },
   langBtnText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: COLORS.text,
+    fontSize: 13,
+    fontWeight: '400',
+    color: COLORS.textLight,
   },
 });
 
