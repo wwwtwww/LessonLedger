@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+// eslint-disable-next-line import/no-unresolved
 import { PieChart } from 'react-native-gifted-charts';
 import { ClassItem } from '../../types';
 import { generateExpensePieData } from '../../utils/chartData';
