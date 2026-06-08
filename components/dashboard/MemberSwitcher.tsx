@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, ScrollView, TouchableOpacity, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
 import { Member } from '../../types';
 import { COLORS } from '../../utils/colors';
 import { triggerHaptic } from '../../utils/haptics';
@@ -13,10 +14,9 @@ interface MemberSwitcherProps {
   onLongPress?: (member: Member) => void;
 }
 
-// 统一的 Spring 配置，让动画更清脆
 const SPRING_CONFIG = {
-  damping: 15,
-  stiffness: 150,
+  damping: 18,
+  stiffness: 120,
 };
 
 export default function MemberSwitcher({ members, currentId, onSelect, onAddPress, onLongPress }: MemberSwitcherProps) {
@@ -26,16 +26,17 @@ export default function MemberSwitcher({ members, currentId, onSelect, onAddPres
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.container}
+        clipChildren={false}
       >
-        {/* 全部按钮也应用动画 */}
         <SelectableItem
           isActive={currentId === 'all'}
           onPress={() => onSelect('all')}
           icon="🌍"
           name="全部"
+          isFirst
         />
 
-        {members.map(member => (
+        {members.map((member, index) => (
           <SelectableItem
             key={member.id}
             isActive={currentId === member.id}
@@ -48,7 +49,11 @@ export default function MemberSwitcher({ members, currentId, onSelect, onAddPres
         ))}
 
         {onAddPress && (
-          <TouchableOpacity onPress={onAddPress} style={styles.addButton} activeOpacity={0.7}>
+          <TouchableOpacity 
+            onPress={onAddPress} 
+            style={[styles.addButton, { marginLeft: -12 }]} 
+            activeOpacity={0.7}
+          >
             <View style={styles.addIconContainer}>
               <Text style={styles.addIcon}>+</Text>
             </View>
@@ -66,107 +71,122 @@ interface SelectableItemProps {
   icon: string;
   name: string;
   activeColor?: string;
+  isFirst?: boolean;
 }
 
-function SelectableItem({ isActive, onPress, onLongPress, icon, name, activeColor }: SelectableItemProps) {
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: withSpring(isActive ? 1.1 : 1, SPRING_CONFIG) }],
-  }));
+function SelectableItem({ isActive, onPress, onLongPress, icon, name, activeColor, isFirst }: SelectableItemProps) {
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { scale: withSpring(isActive ? 1.05 : 1, SPRING_CONFIG) },
+        { translateY: withSpring(isActive ? -6 : 0, SPRING_CONFIG) },
+      ],
+      zIndex: isActive ? 10 : 1,
+    };
+  });
 
   const handlePress = () => {
-    triggerHaptic('light');
+    triggerHaptic('impactLight');
     onPress();
   };
 
   const handleLongPress = () => {
     if (onLongPress) {
-      triggerHaptic('light');
+      triggerHaptic('selection');
       onLongPress();
     }
   };
 
   return (
-    <TouchableOpacity
-      onPress={handlePress}
-      onLongPress={handleLongPress}
-      activeOpacity={0.8}
-    >
-      <Animated.View style={[
-        styles.item,
-        isActive && { borderColor: activeColor || COLORS.primary },
-        animatedStyle
-      ]}>
-        <Text style={styles.emoji}>{icon}</Text>
-        <Text
-          style={[styles.name, isActive && styles.activeName]}
-          numberOfLines={1}
+    <Animated.View style={[
+      styles.itemWrapper, 
+      !isFirst && { marginLeft: -12 },
+      animatedStyle
+    ]}>
+      <TouchableOpacity
+        onPress={handlePress}
+        onLongPress={handleLongPress}
+        activeOpacity={0.9}
+        style={styles.touchable}
+      >
+        <BlurView 
+          intensity={isActive ? 90 : 60} 
+          tint="light"
+          style={[
+            styles.item,
+            { borderColor: isActive ? (activeColor || COLORS.primary) : 'transparent' }
+          ]}
         >
-          {name}
-        </Text>
-      </Animated.View>
-    </TouchableOpacity>
+          <Text style={styles.emoji}>{icon}</Text>
+          <Text
+            style={[styles.name, isActive && styles.activeName]}
+            numberOfLines={1}
+          >
+            {name}
+          </Text>
+        </BlurView>
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
-    paddingVertical: 12,
+    paddingVertical: 20,
+    overflow: 'visible',
   },
   container: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     alignItems: 'center',
-    gap: 12,
+    paddingBottom: 8, // 为 translateY 提供空间
+  },
+  itemWrapper: {
+    shadowColor: 'transparent', // 明确移除阴影
+    elevation: 0,
+  },
+  touchable: {
+    borderRadius: 24,
   },
   item: {
-    backgroundColor: COLORS.white,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: 'transparent',
+    width: 86,
+    height: 100,
+    borderRadius: 24,
+    borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 72,
-    // 增强阴影细腻度，更符合现代 iOS/Android 设计
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  activeItem: {
-    borderColor: COLORS.primary,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
   },
   emoji: {
-    fontSize: 24,
-    marginBottom: 4,
+    fontSize: 28,
+    marginBottom: 6,
   },
   name: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '600',
     color: COLORS.textLight,
   },
   activeName: {
     color: COLORS.text,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   addButton: {
-    marginLeft: 4,
+    zIndex: 0,
   },
   addIconContainer: {
-    width: 48,
-    height: 48,
+    width: 60,
+    height: 100,
     borderRadius: 24,
-    backgroundColor: COLORS.background,
+    backgroundColor: 'rgba(0,0,0,0.03)',
     alignItems: 'center',
     justifyContent: 'center',
     borderStyle: 'dashed',
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: COLORS.border,
   },
   addIcon: {
-    fontSize: 24,
+    fontSize: 32,
     color: COLORS.textLight,
-    fontWeight: '300',
+    fontWeight: '200',
   },
 });
