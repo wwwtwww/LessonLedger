@@ -58,7 +58,8 @@ export default function DashboardPage() {
     handleUpdateClass,
     handleDeleteClass,
     handleCheckIn,
-    fetchData
+    fetchData,
+    fetchMembers
   } = useDashboard();
 
   const [isAddMemberVisible, setIsAddMemberVisible] = useState(false);
@@ -70,10 +71,13 @@ export default function DashboardPage() {
   useEffect(() => {
     const initApp = async () => {
       await requestPermissionsAsync();
-      await fetchData();
+      await Promise.all([
+        fetchMembers(),
+        fetchData()
+      ]);
     };
     initApp();
-  }, [fetchData]);
+  }, [fetchData, fetchMembers]);
 
   // 计算内容滚动的顶部偏移
   const headerOffset = insets.top + HEADER_CONTENT_HEIGHT + 10;
