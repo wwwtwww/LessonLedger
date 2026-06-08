@@ -35,7 +35,14 @@ export function useDashboard() {
   return {
     ...memberHook,
     ...classHook,
-    ...dashboardStats,
+    stats: {
+      totalRemaining: dashboardStats.totalRemaining,
+      totalSpent: dashboardStats.totalSpent,
+      totalClasses: dashboardStats.totalClasses,
+      warningCount: dashboardStats.warningCount
+    },
+    activeMember: dashboardStats.activeMember,
+    themeColor: dashboardStats.themeColor,
     classes: filteredClasses, // 覆盖原始 classes，导出过滤后的结果
     isLoading: memberHook.isLoading || classHook.isLoading
   };
