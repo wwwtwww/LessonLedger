@@ -4,6 +4,7 @@ import { PieChart } from 'react-native-gifted-charts';
 import { ClassItem } from '../../types';
 import { generateExpensePieData } from '../../utils/chartData';
 import { COLORS } from '../../utils/colors';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface ExpensePieChartProps {
   classes: ClassItem[];
@@ -12,10 +13,11 @@ interface ExpensePieChartProps {
 
 export default function ExpensePieChart({ classes, themeColor }: ExpensePieChartProps) {
   const pieData = generateExpensePieData(classes, themeColor);
+  const { t, lang } = useLanguage();
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>课程消费占比</Text>
+      <Text style={styles.title}>{t.expenseChartTitle || '课程消费占比'}</Text>
       <View style={styles.chartWrapper}>
         <PieChart
           data={pieData}
@@ -26,8 +28,10 @@ export default function ExpensePieChart({ classes, themeColor }: ExpensePieChart
             const total = classes.reduce((sum, c) => sum + c.totalPrice, 0);
             return (
               <View style={styles.centerLabel}>
-                <Text style={styles.centerText}>总计</Text>
-                <Text style={[styles.centerTotal, { color: themeColor }]}>¥{total}</Text>
+                <Text style={styles.centerText}>{t.total || '总计'}</Text>
+                <Text style={[styles.centerTotal, { color: themeColor }]}>
+                  {lang === 'zh-CN' ? '￥' : '$'}{total}
+                </Text>
               </View>
             );
           }}

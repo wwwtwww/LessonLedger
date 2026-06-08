@@ -9,13 +9,14 @@ import {
   ActivityIndicator,
   StatusBar
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context'; 
 
 // UI Components
 import GlassHeader from '../components/ui/GlassHeader';
 import AppHeader from '../components/ui/AppHeader';
-import SummaryCard from '../components/dashboard/SummaryCard';
+import SummaryCard from '../components/dashboard/SummaryCard';      
 import MemberSwitcher from '../components/dashboard/MemberSwitcher';
+import ExpensePieChart from '../components/dashboard/ExpensePieChart';
 import AddCourseBtn from '../components/ui/AddCourseBtn';
 import ClassCard from '../components/classes/ClassCard';
 import LogList from '../components/logs/LogList';
@@ -23,8 +24,8 @@ import SwipeableItem from '../components/ui/SwipeableItem';
 import EmptyState from '../components/ui/EmptyState';
 
 // Sheets (Modals)
-import AddMemberSheet from '../components/sheets/AddMemberSheet';
-import AddClassSheet from '../components/sheets/AddClassSheet';
+import AddMemberSheet from '../components/sheets/AddMemberSheet';   
+import AddClassSheet from '../components/sheets/AddClassSheet';     
 
 // Hooks & Utils
 import { useLanguage } from '../contexts/LanguageContext';
@@ -129,10 +130,10 @@ export default function DashboardPage() {
 
   return (
     <View style={styles.container}>
-      <StatusBar 
-        barStyle="dark-content" 
-        backgroundColor="transparent" 
-        translucent 
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent
       />
 
       <GlassHeader>
@@ -157,10 +158,14 @@ export default function DashboardPage() {
           onLongPress={handleMemberLongPress}
         />
 
-        <AddCourseBtn 
-          onPress={() => setIsAddClassVisible(true)} 
+        <AddCourseBtn
+          onPress={() => setIsAddClassVisible(true)}
           color={themeColor}
         />
+
+        {filteredClasses.length > 0 && (
+          <ExpensePieChart classes={filteredClasses} themeColor={themeColor || COLORS.primary} />
+        )}
 
         <View style={styles.listSection}>
           {filteredClasses.length === 0 ? (
