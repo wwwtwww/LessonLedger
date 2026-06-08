@@ -79,7 +79,7 @@ function SelectableItem({ isActive, onPress, onLongPress, icon, name, activeColo
     return {
       transform: [
         { scale: withSpring(isActive ? 1.05 : 1, SPRING_CONFIG) },
-        { translateY: withSpring(isActive ? -6 : 0, SPRING_CONFIG) },
+        { translateY: withSpring(isActive ? -4 : 0, SPRING_CONFIG) },
       ],
       zIndex: isActive ? 10 : 1,
     };
@@ -99,7 +99,7 @@ function SelectableItem({ isActive, onPress, onLongPress, icon, name, activeColo
 
   return (
     <Animated.View style={[
-      styles.itemWrapper, 
+      styles.itemWrapper,
       !isFirst && { marginLeft: -12 },
       animatedStyle
     ]}>
@@ -109,8 +109,8 @@ function SelectableItem({ isActive, onPress, onLongPress, icon, name, activeColo
         activeOpacity={0.9}
         style={styles.touchable}
       >
-        <BlurView 
-          intensity={isActive ? 90 : 60} 
+        <BlurView
+          intensity={isActive ? 90 : 60}
           tint="light"
           style={[
             styles.item,
@@ -141,8 +141,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8, // 为 translateY 提供空间
   },
   itemWrapper: {
-    shadowColor: 'transparent', // 明确移除阴影
-    elevation: 0,
+    // 移除所有阴影以遵循极简规范
   },
   touchable: {
     borderRadius: 24,
@@ -168,8 +167,9 @@ const styles = StyleSheet.create({
   },
   activeName: {
     color: COLORS.text,
-    fontWeight: '800',
+    fontWeight: '700',
   },
+
   addButton: {
     zIndex: 0,
   },
