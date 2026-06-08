@@ -46,13 +46,15 @@ const styles = StyleSheet.create({
     backgroundColor: Platform.OS === 'android' ? hexToRGBA(COLORS.background, 0.9) : 'transparent',
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
+    alignItems: 'center', // 关键修复：强制父容器在水平方向居中其子元素
   },
   content: {
     paddingHorizontal: 20,
     height: 60, // 固定的内容高度，便于外部计算 OFFSET
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    width: '100%',
+    maxWidth: 600,
   },
 });
 
