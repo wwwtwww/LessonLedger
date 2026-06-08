@@ -17,7 +17,7 @@ export default function ExpensePieChart({ classes, themeColor }: ExpensePieChart
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{t.expenseChartTitle || '课程消费占比'}</Text>
+      <Text style={styles.title}>{t.expenseChartTitle}</Text>
       <View style={styles.chartWrapper}>
         <PieChart
           data={pieData}
@@ -28,7 +28,7 @@ export default function ExpensePieChart({ classes, themeColor }: ExpensePieChart
             const total = classes.reduce((sum, c) => sum + c.totalPrice, 0);
             return (
               <View style={styles.centerLabel}>
-                <Text style={styles.centerText}>{t.total || '总计'}</Text>
+                <Text style={styles.centerText}>{t.total}</Text>
                 <Text style={[styles.centerTotal, { color: themeColor }]}>
                   {lang === 'zh-CN' ? '￥' : '$'}{total}
                 </Text>
