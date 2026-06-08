@@ -3,6 +3,7 @@ import { StyleSheet, ScrollView, TouchableOpacity, Text, View } from 'react-nati
 import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { Member } from '../../types';
 import { COLORS } from '../../utils/colors';
+import { triggerHaptic } from '../../utils/haptics';
 
 interface MemberSwitcherProps {
   members: Member[];
@@ -72,10 +73,22 @@ function SelectableItem({ isActive, onPress, onLongPress, icon, name, activeColo
     transform: [{ scale: withSpring(isActive ? 1.1 : 1, SPRING_CONFIG) }],
   }));
 
+  const handlePress = () => {
+    triggerHaptic('light');
+    onPress();
+  };
+
+  const handleLongPress = () => {
+    if (onLongPress) {
+      triggerHaptic('light');
+      onLongPress();
+    }
+  };
+
   return (
     <TouchableOpacity
-      onPress={onPress}
-      onLongPress={onLongPress}
+      onPress={handlePress}
+      onLongPress={handleLongPress}
       activeOpacity={0.8}
     >
       <Animated.View style={[

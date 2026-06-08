@@ -3,7 +3,11 @@ import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { COLORS } from '../../utils/colors';
 
-const AppHeader: React.FC = () => {
+interface AppHeaderProps {
+  themeColor?: string;
+}
+
+const AppHeader: React.FC<AppHeaderProps> = ({ themeColor }) => {
   const { t, toggleLang } = useLanguage();
 
   return (
@@ -11,17 +15,21 @@ const AppHeader: React.FC = () => {
       {/* 左侧：标题与副标题 */}
       <View style={styles.titleGroup}>
         <Text style={styles.appTitle}>{t.title}</Text>
-        <Text style={styles.appSubTitle}>{t.subTitle}</Text>
+        <Text style={[styles.appSubTitle, themeColor ? { color: themeColor } : null]}>
+          {t.subTitle}
+        </Text>
       </View>
 
       {/* 右侧：语言切换按钮 */}
-      <TouchableOpacity style={styles.langBtn} onPress={toggleLang}>    
-        <Text style={styles.langBtnText}>🌐 {t.switchLang}</Text>       
+      <TouchableOpacity 
+        style={[styles.langBtn, themeColor ? { borderColor: themeColor } : null]} 
+        onPress={toggleLang}
+      >
+        <Text style={styles.langBtnText}>🌐 {t.switchLang}</Text>
       </TouchableOpacity>
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   topBar: {
     flex: 1,
