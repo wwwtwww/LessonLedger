@@ -17,6 +17,9 @@ export function useDashboard() {
     const totalSpent = filteredClasses.reduce((acc, curr) => acc + curr.totalPrice, 0);
     const totalClasses = filteredClasses.length;
     const warningCount = filteredClasses.filter(c => (c.totalLessons - c.doneLessons) <= 3).length;
+    
+    // 计算本周待上：统计所有进行中课程的 schedule 条目数
+    const upcomingThisWeek = filteredClasses.reduce((acc, curr) => acc + (curr.schedule?.length || 0), 0);
 
     const activeMember = members.find(m => m.id === currentMemberId) || null;
     const themeColor = activeMember?.themeColor || COLORS.primary;
@@ -26,6 +29,7 @@ export function useDashboard() {
       totalSpent,
       totalClasses,
       warningCount,
+      upcomingThisWeek,
       activeMember,
       themeColor
     };
@@ -39,11 +43,13 @@ export function useDashboard() {
       totalRemaining: dashboardStats.totalRemaining,
       totalSpent: dashboardStats.totalSpent,
       totalClasses: dashboardStats.totalClasses,
-      warningCount: dashboardStats.warningCount
+      warningCount: dashboardStats.warningCount,
+      upcomingThisWeek: dashboardStats.upcomingThisWeek
     },
     activeMember: dashboardStats.activeMember,
     themeColor: dashboardStats.themeColor,
     classes: filteredClasses, // 覆盖原始 classes，导出过滤后的结果
+    allClasses: classHook.classes,
     isLoading: memberHook.isLoading || classHook.isLoading
   };
 }

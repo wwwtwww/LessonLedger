@@ -4,43 +4,66 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useLanguage } from '../../contexts/LanguageContext'; 
-import { LogItem } from '../../types';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { LogItem, ClassItem, Member } from '../../types';
 import { COLORS } from '../../utils/colors';
 
 interface LogListProps {
   logs: LogItem[];
+  classes: ClassItem[];
+  members: Member[];
 }
 
-const LogList: React.FC<LogListProps> = ({ logs }) => {       
+const LogList: React.FC<LogListProps> = ({ logs, classes, members }) => {
   const { t } = useLanguage();
+
+  const renderLogItem = (log: LogItem, index: number) => {
+    const classItem = classes.find(c => c.id === log.classId);
+    const member = members.find(m => m.id === classItem?.memberId);
+    
+    // Fallback parsing if classId lookup fails
+    let avatar = member?.icon || '📝';
+    let courseName = classItem?.name;
+    
+    if (!courseName) {
+      // Try to parse from text: [Member] Course -> ...
+      const match = log.text.match(/\[(.*?)\] (.*?) ->/);
+      if (match) {
+        courseName = match[2];
+        if (!member) {
+           const foundMember = members.find(m => m.name === match[1]);
+           if (foundMember) avatar = foundMember.icon;
+        }
+      } else {
+        courseName = log.text;
+      }
+    }
+
+    return (
+      <View key={log.id} style={styles.logItem}>
+        <View style={styles.avatarContainer}>
+          <Text style={styles.avatarText}>{avatar}</Text>
+        </View>
+        <View style={styles.contentContainer}>
+          <Text style={styles.courseName} numberOfLines={1}>{courseName}</Text>
+          <Text style={styles.timestamp}>{log.time}</Text>
+        </View>
+        {/* Divider - show for all but maybe hide for the last one if preferred, but requirement says must have divider */}
+        <View style={styles.divider} />
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>{t.historyLog}</Text> 
+      <Text style={styles.sectionTitle}>{t.recentLogs}</Text>
       <View style={styles.listWrapper}>
         {logs.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyLogText}>{t.noLog}</Text>  
+            <Text style={styles.emptyLogText}>{t.noLog}</Text>
           </View>
         ) : (
-          logs.map((log, index) => (
-            <View 
-              key={log.id} 
-              style={[
-                styles.logRow, 
-                index === logs.length - 1 && { borderBottomWidth: 0 }
-              ]}
-            >     
-              <View style={styles.timeColumn}>
-                <Text style={styles.logDate}>{log.time.split(' ')[0].substring(5)}</Text>
-                <Text style={styles.logTime}>{log.time.split(' ')[1]?.substring(0, 5)}</Text>
-              </View>
-              <View style={styles.textContainer}>
-                <Text style={styles.logText}>✅ {log.text}</Text>
-              </View>
-            </View>
-          ))
+          logs.map((log, index) => renderLogItem(log, index))
         )}
       </View>
     </View>
@@ -51,15 +74,53 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: 24,
   },
-  sectionTitle: { 
-    fontSize: 16, 
-    fontWeight: '800', 
-    color: COLORS.text, 
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600', // SemiBold
+    color: COLORS.textPrimary,
     marginBottom: 16,
-    marginLeft: 4
   },
   listWrapper: {
-    // No background card here, just linear on background
+  },
+  logItem: {
+    height: 72,
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  avatarContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F5F5F7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  avatarText: {
+    fontSize: 22,
+  },
+  contentContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  courseName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+    marginBottom: 4,
+  },
+  timestamp: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+  },
+  divider: {
+    position: 'absolute',
+    bottom: 0,
+    left: 60, // Start after avatar (44 width + 16 margin)
+    right: 0,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: COLORS.border,
   },
   emptyContainer: {
     padding: 24,
@@ -70,43 +131,11 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderStyle: 'dashed',
   },
-  emptyLogText: { 
-    color: COLORS.textLight, 
-    textAlign: 'center', 
-    fontSize: 14 
+  emptyLogText: {
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    fontSize: 14
   },
-  logRow: { 
-    flexDirection: 'row', 
-    alignItems: 'flex-start',
-    paddingVertical: 14, 
-    paddingHorizontal: 4,
-    borderBottomWidth: StyleSheet.hairlineWidth, 
-    borderBottomColor: COLORS.border,
-  },
-  timeColumn: {
-    width: 60,
-    marginRight: 16,
-    alignItems: 'flex-start',
-  },
-  logDate: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.text,
-  },
-  logTime: { 
-    fontSize: 11, 
-    color: COLORS.textLight, 
-    marginTop: 2,
-  },
-  textContainer: {
-    flex: 1,
-  },
-  logText: { 
-    fontSize: 14, 
-    fontWeight: '500',
-    color: COLORS.text, 
-    lineHeight: 20,
-  }
 });
 
 export default LogList;

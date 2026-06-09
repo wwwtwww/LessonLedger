@@ -30,7 +30,8 @@ export function useClasses(currentMemberId: string, members: Member[]) {
       const formattedLogs = logsRes.data.map((log: any) => ({
         id: log.id.toString(),
         time: new Date(log.created_at).toLocaleString(),
-        text: log.text
+        text: log.text,
+        classId: log.class_id?.toString()
       }));
       setLogs(formattedLogs);
     }

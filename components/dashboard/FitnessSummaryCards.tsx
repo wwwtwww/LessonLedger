@@ -1,7 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Dimensions, Platform } from 'react-native';
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
+import { StyleSheet, Text, View, Dimensions } from 'react-native';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { COLORS } from '../../utils/colors';
 
@@ -10,59 +8,61 @@ interface FitnessSummaryCardsProps {
     totalSpent: number;
     totalClasses: number;
     totalRemaining: number;
+    upcomingThisWeek: number;
   };
   themeColor?: string;
-  onRemainingPress?: () => void;
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_GAP = 12;
-const CONTAINER_PADDING = 20;
-// 计算 Web 端 (max 600) 和手机端的卡片宽度
-const CARD_WIDTH = (Math.min(SCREEN_WIDTH, 600) - CONTAINER_PADDING * 2 - CARD_GAP) / 2;
+const CONTAINER_PADDING = 24;
+const GAP = 16;
+const CARD_WIDTH = (Math.min(SCREEN_WIDTH, 430) - CONTAINER_PADDING * 2 - GAP) / 2;
 
-const FitnessSummaryCards: React.FC<FitnessSummaryCardsProps> = ({ 
-  stats, 
+const SummaryCard: React.FC<{
+  icon: string;
+  value: string | number;
+  label: string;
+  color?: string;
+}> = ({ icon, value, label, color = COLORS.textPrimary }) => (
+  <View style={styles.card}>
+    <Text style={styles.icon}>{icon}</Text>
+    <Text style={[styles.value, { color }]} numberOfLines={1} adjustsFontSizeToFit>
+      {value}
+    </Text>
+    <Text style={styles.label}>{label}</Text>
+  </View>
+);
+
+const FitnessSummaryCards: React.FC<FitnessSummaryCardsProps> = ({
+  stats,
   themeColor = COLORS.primary,
-  onRemainingPress 
 }) => {
   const { lang, t } = useLanguage();
-  const { totalSpent, totalRemaining } = stats;
+  const { totalSpent, totalClasses, totalRemaining, upcomingThisWeek } = stats;
 
   return (
     <View style={styles.container}>
-      {/* 左侧卡片：累计学费投入 (Gradient) */}
-      <View style={[styles.cardWrapper, { width: CARD_WIDTH }]}>
-        <LinearGradient
-          colors={[themeColor, themeColor + 'CC', themeColor + '80']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.gradientCard}
-        >
-          <View style={styles.content}>
-            <Text style={styles.label}>{t.totalInvestment}</Text>
-            <Text style={styles.value} numberOfLines={1} adjustsFontSizeToFit>
-              {lang === 'zh-CN' ? '¥' : '$'}{totalSpent.toLocaleString()}
-            </Text>
-          </View>
-        </LinearGradient>
-      </View>
-
-      {/* 右侧卡片：全家剩余总课时 (BlurView / 入口) */}
-      <TouchableOpacity 
-        style={[styles.cardWrapper, { width: CARD_WIDTH }]}
-        onPress={onRemainingPress}
-        activeOpacity={0.8}
-      >
-        <BlurView intensity={Platform.OS === 'ios' ? 40 : 100} tint="light" style={styles.blurCard}>
-          <View style={styles.content}>
-            <Text style={[styles.label, { color: COLORS.textLight }]}>{t.totalRemaining}</Text>
-            <Text style={[styles.value, { color: themeColor }]} numberOfLines={1} adjustsFontSizeToFit>
-              {totalRemaining}
-            </Text>
-          </View>
-        </BlurView>
-      </TouchableOpacity>
+      <SummaryCard
+        icon="💰"
+        value={`${lang === 'zh-CN' ? '¥' : '$'}${totalSpent.toLocaleString()}`}
+        label={t.totalInvestment}
+      />
+      <SummaryCard
+        icon="📚"
+        value={totalClasses}
+        label={t.activeProjects}
+      />
+      <SummaryCard
+        icon="⏳"
+        value={totalRemaining}
+        label={t.totalRemaining}
+        color={themeColor}
+      />
+      <SummaryCard
+        icon="🗓️"
+        value={upcomingThisWeek}
+        label={t.upcomingThisWeek}
+      />
     </View>
   );
 };
@@ -70,39 +70,43 @@ const FitnessSummaryCards: React.FC<FitnessSummaryCardsProps> = ({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
-    paddingHorizontal: 0,
-    marginBottom: 24, // 严格对齐 24px 间距
+    gap: GAP,
+    marginTop: 24,
   },
-  cardWrapper: {
+  card: {
+    width: CARD_WIDTH,
     height: 120,
+    backgroundColor: '#FFFFFF',
     borderRadius: 24,
-    overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: COLORS.border,
-  },
-  gradientCard: {
-    flex: 1,
-  },
-  blurCard: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
-  },
-  content: {
-    flex: 1,
     padding: 16,
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    justifyContent: 'center',
+    // Spec: y: 8, blur: 30, opacity: 0.08
+    shadowColor: 'rgba(0,0,0,0.08)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 15, // Approx for 30 blur
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.04)',
+  },
+  icon: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  value: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+    marginBottom: 2,
   },
   label: {
     fontSize: 12,
-    fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.9)',
-    textTransform: 'uppercase',
-  },
-  value: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontWeight: '500',
+    color: COLORS.textSecondary,
+    textAlign: 'center',
   },
 });
 

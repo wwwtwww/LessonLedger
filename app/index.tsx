@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   StatusBar
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context'; 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // UI Components
 import GlassHeader from '../components/ui/GlassHeader';
@@ -17,12 +17,11 @@ import AppHeader from '../components/ui/AppHeader';
 import FitnessSummaryCards from '../components/dashboard/FitnessSummaryCards';
 import MemberSwitcher from '../components/dashboard/MemberSwitcher';
 import WarningSection from '../components/dashboard/WarningSection';
-import AddCourseBtn from '../components/ui/AddCourseBtn';
 import LogList from '../components/logs/LogList';
 
 // Sheets (Modals)
-import AddMemberSheet from '../components/sheets/AddMemberSheet';   
-import AddClassSheet from '../components/sheets/AddClassSheet';     
+import AddMemberSheet from '../components/sheets/AddMemberSheet';
+import AddClassSheet from '../components/sheets/AddClassSheet';
 
 // Hooks & Utils
 import { useLanguage } from '../contexts/LanguageContext';
@@ -31,10 +30,14 @@ import { Member, ClassItem, ScheduleEntry } from '../types';
 import { requestPermissionsAsync } from '../utils/notifications';
 import { COLORS } from '../utils/colors';
 
+// Constants
+const HEADER_CONTENT_HEIGHT = 72; // 与 GlassHeader.tsx 中的 content.height 保持一致
+
 export default function DashboardPage() {
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
 
+  // 使用聚合后的 useDashboard Hook
   const {
     members,
     currentMemberId,
@@ -52,7 +55,8 @@ export default function DashboardPage() {
     handleDeleteClass,
     handleCheckIn,
     fetchData,
-    fetchMembers
+    fetchMembers,
+    allClasses
   } = useDashboard();
 
   const [isAddMemberVisible, setIsAddMemberVisible] = useState(false);
@@ -60,6 +64,7 @@ export default function DashboardPage() {
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [editingClass, setEditingClass] = useState<ClassItem | null>(null);
 
+  // 初始化加载
   useEffect(() => {
     const initApp = async () => {
       await requestPermissionsAsync();
@@ -70,6 +75,9 @@ export default function DashboardPage() {
     };
     initApp();
   }, [fetchData, fetchMembers]);
+
+  // 计算内容滚动的顶部偏移
+  const headerOffset = insets.top + HEADER_CONTENT_HEIGHT + 10;
 
   const onSaveMember = (data: { id?: string; name: string; icon: string; themeColor: string }) => {
     if (data.id) {
@@ -129,23 +137,20 @@ export default function DashboardPage() {
         translucent
       />
 
+      <GlassHeader>
+        <AppHeader themeColor={themeColor} />
+      </GlassHeader>
+
       <ScrollView
         style={styles.container}
         contentContainerStyle={[
           styles.contentContainer,
-          { paddingBottom: 50 + insets.bottom }
+          { paddingTop: headerOffset }
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* 1 Header */}
-        <GlassHeader>
-          <AppHeader themeColor={themeColor} />
-        </GlassHeader>
-
-        {/* 2 Summary Cards */}
         <FitnessSummaryCards stats={stats} themeColor={themeColor} />
 
-        {/* 3 Member Switcher */}
         <MemberSwitcher
           members={members}
           currentId={currentMemberId}
@@ -154,16 +159,24 @@ export default function DashboardPage() {
           onLongPress={handleMemberLongPress}
         />
 
-        {/* 4 Warning Courses */}
-        <WarningSection classes={filteredClasses} themeColor={themeColor} />
-
-        <AddCourseBtn
-          onPress={() => setIsAddClassVisible(true)}
-          color={themeColor}
+        <WarningSection 
+          classes={filteredClasses} 
+          members={members}
+          themeColor={themeColor} 
+          onCheckIn={(classId) => {
+            const cls = filteredClasses.find(c => c.id === classId);
+            if (cls) {
+              const m = members.find(mem => mem.id === cls.memberId);
+              handleCheckIn(classId, cls.name, m?.name || '未知');
+            }
+          }}
         />
 
-        {/* 5 Recent Logs */}
-        <LogList logs={logs} />
+        <LogList 
+          logs={logs} 
+          classes={allClasses}
+          members={members}
+        />
       </ScrollView>
 
       <AddMemberSheet
@@ -189,10 +202,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   contentContainer: {
-    maxWidth: 430, // Spec: 430
+    paddingHorizontal: 24,
+    paddingBottom: 50,
+    maxWidth: 430,
     width: '100%',
     alignSelf: 'center',
-    paddingHorizontal: 24, // Spec: 24
+    gap: 24,
   },
   center: {
     justifyContent: 'center',
@@ -200,6 +215,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 10,
-    color: COLORS.textLight,
+    color: COLORS.textSecondary,
   },
 });

@@ -1,6 +1,10 @@
 import React from 'react';
 import { StyleSheet, ScrollView, TouchableOpacity, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
+import Animated, { 
+  useAnimatedStyle, 
+  withTiming, 
+  Easing 
+} from 'react-native-reanimated';
 import { Member } from '../../types';
 import { COLORS } from '../../utils/colors';
 import { triggerHaptic } from '../../utils/haptics';
@@ -13,8 +17,10 @@ interface MemberSwitcherProps {
   onLongPress?: (member: Member) => void;
 }
 
-const ANIMATION_DURATION = 300;
-const ANIMATION_EASING = Easing.out(Easing.ease);
+const ANIM_CONFIG = {
+  duration: 300,
+  easing: Easing.out(Easing.ease),
+};
 
 export default function MemberSwitcher({ members, currentId, onSelect, onAddPress, onLongPress }: MemberSwitcherProps) {
   return (
@@ -29,7 +35,6 @@ export default function MemberSwitcher({ members, currentId, onSelect, onAddPres
           onPress={() => onSelect('all')}
           icon="🌍"
           name="全部"
-          isFirst
         />
 
         {members.map((member) => (
@@ -40,6 +45,7 @@ export default function MemberSwitcher({ members, currentId, onSelect, onAddPres
             onLongPress={() => onLongPress?.(member)}
             icon={member.icon}
             name={member.name}
+            activeColor={member.themeColor}
           />
         ))}
 
@@ -65,29 +71,21 @@ interface SelectableItemProps {
   onLongPress?: () => void;
   icon: string;
   name: string;
-  isFirst?: boolean;
+  activeColor?: string;
 }
 
-function SelectableItem({ isActive, onPress, onLongPress, icon, name, isFirst }: SelectableItemProps) {
+function SelectableItem({ isActive, onPress, onLongPress, icon, name, activeColor }: SelectableItemProps) {
   const animatedStyle = useAnimatedStyle(() => {
     return {
       transform: [
-        { 
-          scale: withTiming(isActive ? 1.08 : 1, { 
-            duration: ANIMATION_DURATION,
-            easing: ANIMATION_EASING
-          }) 
-        },
+        { scale: withTiming(isActive ? 1.08 : 1, ANIM_CONFIG) },
       ],
-      borderWidth: withTiming(isActive ? 2 : 0, {
-        duration: ANIMATION_DURATION,
-        easing: ANIMATION_EASING
-      }),
-      borderColor: isActive ? COLORS.primary : 'transparent',
-      backgroundColor: withTiming(isActive ? 'rgba(99, 102, 241, 0.08)' : 'rgba(255, 255, 255, 1)', {
-        duration: ANIMATION_DURATION,
-        easing: ANIMATION_EASING
-      }),
+      borderWidth: withTiming(isActive ? 2 : 0, ANIM_CONFIG),
+      backgroundColor: withTiming(
+        isActive ? 'rgba(99,102,241,0.08)' : '#FFFFFF', 
+        ANIM_CONFIG
+      ),
+      borderColor: isActive ? (activeColor || COLORS.primary) : 'transparent',
     };
   });
 
@@ -104,69 +102,60 @@ function SelectableItem({ isActive, onPress, onLongPress, icon, name, isFirst }:
   };
 
   return (
-    <Animated.View style={[
-      styles.item,
-      !isFirst && { marginLeft: 16 },
-      animatedStyle
-    ]}>
-      <TouchableOpacity
-        onPress={handlePress}
-        onLongPress={handleLongPress}
-        activeOpacity={0.9}
-        style={styles.touchable}
-      >
+    <TouchableOpacity
+      onPress={handlePress}
+      onLongPress={handleLongPress}
+      activeOpacity={0.9}
+      style={styles.itemContainer}
+    >
+      <Animated.View style={[styles.item, animatedStyle]}>
         <Text style={styles.emoji}>{icon}</Text>
-        <Text
-          style={[styles.name, isActive && styles.activeName]}
-          numberOfLines={1}
-        >
-          {name}
-        </Text>
-      </TouchableOpacity>
-    </Animated.View>
+      </Animated.View>
+      <Text style={[styles.name, isActive && styles.activeName]} numberOfLines={1}>
+        {name}
+      </Text>
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
     marginTop: 24,
-    height: 88,
-    justifyContent: 'center',
+    height: 100, // 为下方文字留出空间
   },
   container: {
     paddingHorizontal: 24,
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: 16,
   },
-  touchable: {
-    flex: 1,
+  itemContainer: {
     alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    height: '100%',
+    width: 72,
   },
   item: {
     width: 72,
     height: 72,
     borderRadius: 24,
-    overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    // 默认背景色在 Animated.View 中动态控制
   },
   emoji: {
-    fontSize: 24,
-    marginBottom: 2,
+    fontSize: 32,
   },
   name: {
-    fontSize: 12,
+    marginTop: 8,
+    fontSize: 13,
     fontWeight: '500',
-    color: COLORS.textLight,
+    color: COLORS.textSecondary,
   },
   activeName: {
-    color: COLORS.primary,
-    fontWeight: '600',
+    color: COLORS.textPrimary,
+    fontWeight: '700',
   },
-
   addButton: {
-    marginLeft: 16,
+    width: 72,
+    alignItems: 'center',
   },
   addIconContainer: {
     width: 72,
@@ -176,12 +165,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderStyle: 'dashed',
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: COLORS.border,
   },
   addIcon: {
-    fontSize: 28,
-    color: COLORS.textLight,
-    fontWeight: '300',
+    fontSize: 32,
+    color: COLORS.textSecondary,
+    fontWeight: '200',
   },
 });
