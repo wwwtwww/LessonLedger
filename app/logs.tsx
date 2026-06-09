@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, StatusBar, Modal, Platform } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { DrawerActions } from '@react-navigation/native';
+import { Stack, useRouter, useNavigation } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { triggerHaptic } from '../utils/haptics';
 import { COLORS } from '../utils/colors';
 import { useDashboard } from '../hooks/useDashboard';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -9,7 +11,13 @@ import { LogItem } from '../types';
 
 export default function LogsScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { lang } = useLanguage();
+
+  const handleMenuPress = () => {
+    triggerHaptic('light');
+    navigation.dispatch(DrawerActions.toggleDrawer());
+  };
   const { logs, allClasses, members } = useDashboard();
   const [selectedLog, setSelectedLog] = useState<LogItem | null>(null);
 
@@ -100,8 +108,8 @@ export default function LogsScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
-          <Feather name="chevron-left" size={24} color={COLORS.textPrimary} />
+        <TouchableOpacity onPress={handleMenuPress} style={styles.iconBtn}>
+          <Feather name="menu" size={24} color={COLORS.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{lang === 'zh-CN' ? '打卡日志' : 'Logs'}</Text>
         <TouchableOpacity style={styles.filterBtn}>

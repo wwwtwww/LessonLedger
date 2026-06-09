@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, StatusBar, Alert, Platform } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useNavigation } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { DrawerActions } from '@react-navigation/native';
+import { triggerHaptic } from '../utils/haptics';
 import { COLORS } from '../utils/colors';
 import { useDashboard } from '../hooks/useDashboard';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -13,8 +15,14 @@ const THEME_COLORS = ['#6366F1', '#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8
 
 export default function MembersScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { lang, t } = useLanguage();
   const { members, handleDeleteMember, handleAddMember, handleUpdateMember } = useDashboard();
+
+  const handleMenuPress = () => {
+    triggerHaptic('light');
+    navigation.dispatch(DrawerActions.toggleDrawer());
+  };
   
   const [isAddVisible, setIsAddVisible] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
@@ -53,8 +61,8 @@ export default function MembersScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
-          <Feather name="chevron-left" size={24} color={COLORS.textPrimary} />
+        <TouchableOpacity onPress={handleMenuPress} style={styles.iconBtn}>
+          <Feather name="menu" size={24} color={COLORS.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{lang === 'zh-CN' ? '成员管理' : 'Members'}</Text>
         <TouchableOpacity onPress={() => { setEditingMember(null); setIsAddVisible(true); }} style={styles.iconBtn}>
