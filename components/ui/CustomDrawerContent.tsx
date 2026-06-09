@@ -1,0 +1,22 @@
+import React from 'react';
+import { View, StyleSheet, Text } from 'react-native';
+import { DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
+import { COLORS } from '../../utils/colors';
+
+export default function CustomDrawerContent(props: any) {
+  return (
+    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+      <DrawerContentScrollView {...props} contentContainerStyle={{ paddingTop: 60 }}>
+        <View style={styles.header}>
+           <Text style={styles.title}>LessonLedger</Text>
+        </View>
+        <DrawerItemList {...props} />
+      </DrawerContentScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  header: { padding: 20, marginBottom: 20 },
+  title: { fontSize: 24, fontWeight: 'bold', color: COLORS.textPrimary }
+});
