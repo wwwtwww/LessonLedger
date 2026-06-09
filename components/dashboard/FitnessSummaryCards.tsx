@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -105,7 +105,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 });
-
-import { Platform } from 'react-native'; // 补上遗漏的导入
 
 export default FitnessSummaryCards;
