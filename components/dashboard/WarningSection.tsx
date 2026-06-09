@@ -1,9 +1,111 @@
-import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
+import React, { useEffect } from 'react';
+import { StyleSheet, Text, View, TouchableWithoutFeedback, Platform } from 'react-native';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withTiming, 
+  Easing,
+} from 'react-native-reanimated';
 import { COLORS } from '../../utils/colors';
 import { ClassItem, Member } from '../../types';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { triggerHaptic } from '../../utils/haptics';
+
+interface WarningCardProps {
+  item: ClassItem;
+  member?: Member;
+  themeColor?: string;
+  onCheckIn?: (classId: string) => void;
+  lang: string;
+  t: any;
+}
+
+const WarningCard: React.FC<WarningCardProps> = ({ item, member, themeColor, onCheckIn, lang, t }) => {
+  const remaining = item.totalLessons - item.doneLessons;
+  const progress = item.doneLessons / item.totalLessons;
+  
+  // Animation values
+  const scale = useSharedValue(1);
+  const progressWidth = useSharedValue(0);
+
+  useEffect(() => {
+    // Progress bar animation: 250ms, easeOut
+    progressWidth.value = withTiming(progress, {
+      duration: 250,
+      easing: Easing.out(Easing.ease),
+    });
+  }, [progress]);
+
+  const cardAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const progressAnimatedStyle = useAnimatedStyle(() => ({
+    width: `${Math.min(progressWidth.value * 100, 100)}%`,
+  }));
+
+  const handlePressIn = () => {
+    // Press feedback: Scale 1.0 -> 0.97, 120ms
+    scale.value = withTiming(0.97, { duration: 120 });
+  };
+
+  const handlePressOut = () => {
+    scale.value = withTiming(1, { duration: 120 });
+  };
+
+  const handlePress = () => {
+    triggerHaptic('light');
+    if (onCheckIn) {
+      onCheckIn(item.id);
+    }
+  };
+
+  const isUrgent = remaining <= 3;
+
+  return (
+    <TouchableWithoutFeedback
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      onPress={handlePress}
+    >
+      <Animated.View style={[styles.card, cardAnimatedStyle]}>
+        {/* 1. Course Name (18px SemiBold) */}
+        <Text style={styles.courseName} numberOfLines={1}>{item.name}</Text>
+
+        {/* 2. Member Badge (28x28px, Radius 14px) */}
+        <View style={styles.badgeRow}>
+          <View style={[styles.memberBadge, { backgroundColor: (member?.themeColor || COLORS.primary) + '15' }]}>
+             <Text style={[styles.memberBadgeText, { color: member?.themeColor || COLORS.primary }]}>
+                {member?.name?.charAt(0) || 'M'}
+             </Text>
+          </View>
+          <Text style={styles.memberNameText}>{member?.name || 'Member'}</Text>
+        </View>
+
+        {/* 3. Progress Bar (Height 8px, Radius 999) */}
+        <View style={styles.progressBarBg}>
+          <Animated.View
+            style={[
+              styles.progressBarFill,
+              { backgroundColor: themeColor || COLORS.primary },
+              progressAnimatedStyle
+            ]}
+          />
+        </View>
+
+        {/* 4. Remaining Count (15px Regular, Highlight if <= 3) */}
+        <Text style={[styles.remainingCount, isUrgent && styles.urgentText]}>
+          {lang === 'zh-CN' ? `剩余 ${remaining} 节/次` : `Remaining: ${remaining}`}
+        </Text>
+
+        {/* 5. Action Button (Height 48px, Radius 16px, Width 100%) */}
+        <View style={[styles.actionButton, { backgroundColor: themeColor || COLORS.primary }]}>
+          <Text style={styles.buttonText}>{t.btnCheckIn}</Text>
+        </View>
+      </Animated.View>
+    </TouchableWithoutFeedback>
+  );
+};
 
 interface WarningSectionProps {
   classes: ClassItem[];
@@ -14,7 +116,7 @@ interface WarningSectionProps {
 
 const WarningSection: React.FC<WarningSectionProps> = ({ classes, members, themeColor, onCheckIn }) => {
   const { t, lang } = useLanguage();
-  
+
   // Spec: Only courses with remaining <= 3 and > 0
   const warningClasses = classes.filter(c => (c.totalLessons - c.doneLessons) <= 3 && (c.totalLessons - c.doneLessons) > 0);
 
@@ -24,58 +126,17 @@ const WarningSection: React.FC<WarningSectionProps> = ({ classes, members, theme
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>{lang === 'zh-CN' ? '课程预警' : 'Course Warning'}</Text>
       {warningClasses.map((item) => {
-        const remaining = item.totalLessons - item.doneLessons;
         const member = members.find(m => m.id === item.memberId);
-        const progress = item.doneLessons / item.totalLessons;
-        
-        const handlePress = () => {
-          triggerHaptic('switchMember');
-          if (onCheckIn) {
-            onCheckIn(item.id);
-          }
-        };
-
         return (
-          <View key={item.id} style={styles.card}>
-            {/* 1. Course Name */}
-            <Text style={styles.courseName} numberOfLines={1}>{item.name}</Text>
-            
-            {/* 2. Member Badge */}
-            <View style={styles.badgeWrapper}>
-              <View style={[styles.badge, { backgroundColor: (member?.themeColor || COLORS.primary) + '15' }]}>
-                <Text style={[styles.badgeText, { color: member?.themeColor || COLORS.primary }]}>
-                  {member?.name || 'Member'}
-                </Text>
-              </View>
-            </View>
-
-            {/* 3. Progress Bar */}
-            <View style={styles.progressBarBg}>
-              <View 
-                style={[
-                  styles.progressBarFill, 
-                  { 
-                    width: `${Math.min(progress * 100, 100)}%`,
-                    backgroundColor: themeColor || COLORS.primary 
-                  }
-                ]} 
-              />
-            </View>
-
-            {/* 4. Remaining Count */}
-            <Text style={styles.remainingCount}>
-              {lang === 'zh-CN' ? `剩余 ${remaining} 节/次` : `Remaining: ${remaining}`}
-            </Text>
-
-            {/* 5. Action Button */}
-            <TouchableOpacity 
-              style={[styles.actionButton, { backgroundColor: COLORS.primary }]} 
-              onPress={handlePress}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.buttonText}>{t.btnCheckIn}</Text>
-            </TouchableOpacity>
-          </View>
+          <WarningCard 
+            key={item.id} 
+            item={item} 
+            member={member} 
+            themeColor={themeColor} 
+            onCheckIn={onCheckIn}
+            lang={lang}
+            t={t}
+          />
         );
       })}
     </View>
@@ -84,61 +145,68 @@ const WarningSection: React.FC<WarningSectionProps> = ({ classes, members, theme
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 24, // Spec: Position below Member Switcher, Margin Top: 24
+    marginTop: 24,
     marginBottom: 8,
+    paddingHorizontal: 16,
   },
   sectionTitle: {
-    fontSize: 20, // Spec: Section Title 20 SemiBold
+    fontSize: 20,
     fontWeight: '600',
-    color: COLORS.textPrimary, // Spec: Text Primary
+    color: COLORS.textPrimary,
     marginBottom: 16,
   },
   card: {
-    height: 160, // Spec: Height 160
+    height: 160,
     backgroundColor: '#FFFFFF',
-    borderRadius: 24, // Spec: Radius 24
-    padding: 20, // Spec: Padding 20
+    borderRadius: 24,
+    padding: 20,
     marginBottom: 16,
-    // Spec: Shadow rgba(0,0,0,0.08), y:8, blur:30
     ...Platform.select({
       ios: {
-        shadowColor: 'rgba(0,0,0,0.08)',
+        shadowColor: '#000000',
         shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 1,
+        shadowOpacity: 0.08,
         shadowRadius: 30,
       },
       android: {
-        elevation: 4,
+        elevation: 8,
       },
       web: {
         boxShadow: '0px 8px 30px rgba(0,0,0,0.08)',
       }
     }),
-    justifyContent: 'space-between', // Ensures even distribution of the 5 elements
+    justifyContent: 'space-between',
   },
   courseName: {
-    fontSize: 18, // Spec: Course Title 18 SemiBold
+    fontSize: 18,
     fontWeight: '600',
     color: COLORS.textPrimary,
   },
-  badgeWrapper: {
-    flexDirection: 'row', // To prevent badge from taking full width
-  },
-  badge: {
-    height: 28, // Spec: Height 28
-    borderRadius: 14, // Spec: Radius 14
-    paddingHorizontal: 12, // Spec: Padding Horizontal 12
-    justifyContent: 'center',
+  badgeRow: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  badgeText: {
+  memberBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  memberBadgeText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  memberNameText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
   },
   progressBarBg: {
-    height: 8, // Spec: Height 8
+    height: 8,
     backgroundColor: '#F1F5F9',
-    borderRadius: 999, // Spec: Radius 999
+    borderRadius: 999,
     overflow: 'hidden',
   },
   progressBarFill: {
@@ -146,13 +214,18 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   remainingCount: {
-    fontSize: 13, // Spec: Caption 13 Regular
-    color: COLORS.textSecondary, // Spec: Text Secondary
+    fontSize: 15,
+    color: COLORS.textSecondary,
+    fontWeight: '400',
+  },
+  urgentText: {
+    color: COLORS.danger,
+    fontWeight: '600',
   },
   actionButton: {
-    height: 48, // Spec: Height 48
-    borderRadius: 16, // Spec: Radius 16
-    width: '100%', // Spec: Width 100%
+    height: 48,
+    borderRadius: 16,
+    width: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },
