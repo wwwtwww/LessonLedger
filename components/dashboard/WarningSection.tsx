@@ -10,24 +10,27 @@ interface WarningSectionProps {
 }
 
 const WarningSection: React.FC<WarningSectionProps> = ({ classes, themeColor }) => {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   // Only show classes with 3 or fewer lessons remaining and still have remaining lessons
-  const warningClasses = classes.filter(c => c.remaining_lessons <= 3 && c.remaining_lessons > 0);
+  const warningClasses = classes.filter(c => (c.totalLessons - c.doneLessons) <= 3 && (c.totalLessons - c.doneLessons) > 0);
 
   if (warningClasses.length === 0) return null;
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>{t.lang === 'zh-CN' ? '⚠️ 临近结课' : '⚠️ Low Lessons Warning'}</Text>
-      {warningClasses.map((item) => (
-        <View key={item.id} style={styles.warningRow}>
-          <View style={[styles.indicator, { backgroundColor: themeColor || COLORS.danger }]} />
-          <Text style={styles.className} numberOfLines={1}>{item.name}</Text>
-          <Text style={styles.remainingText}>
-            {t.remain} <Text style={styles.highlight}>{item.remaining_lessons}</Text> {item.unit_type === 'session' ? t.unitSession : t.unitLesson}
-          </Text>
-        </View>
-      ))}
+      <Text style={styles.sectionTitle}>{lang === 'zh-CN' ? '⚠️ 临近结课' : '⚠️ Low Lessons Warning'}</Text>
+      {warningClasses.map((item) => {
+        const remaining = item.totalLessons - item.doneLessons;
+        return (
+          <View key={item.id} style={styles.warningRow}>
+            <View style={[styles.indicator, { backgroundColor: themeColor || COLORS.danger }]} />
+            <Text style={styles.className} numberOfLines={1}>{item.name}</Text>
+            <Text style={styles.remainingText}>
+              {t.remain} <Text style={styles.highlight}>{remaining}</Text> {item.unitType === 'session' ? t.unitSession : t.unitLesson}
+            </Text>
+          </View>
+        );
+      })}
     </View>
   );
 };

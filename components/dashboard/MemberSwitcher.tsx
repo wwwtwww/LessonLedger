@@ -26,7 +26,6 @@ export default function MemberSwitcher({ members, currentId, onSelect, onAddPres
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.container}
-        clipChildren={false}
       >
         <SelectableItem
           isActive={currentId === 'all'}
@@ -86,13 +85,13 @@ function SelectableItem({ isActive, onPress, onLongPress, icon, name, activeColo
   });
 
   const handlePress = () => {
-    triggerHaptic('impactLight');
+    triggerHaptic('light');
     onPress();
   };
 
   const handleLongPress = () => {
     if (onLongPress) {
-      triggerHaptic('selection');
+      triggerHaptic('light');
       onLongPress();
     }
   };
