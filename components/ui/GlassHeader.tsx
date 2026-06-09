@@ -23,7 +23,7 @@ export default function GlassHeader({ children }: GlassHeaderProps) {
   useEffect(() => {
     // 注入挂载动画：200ms 淡入
     opacity.value = withTiming(1, { duration: 200 });
-  }, []);
+  }, [opacity]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,

@@ -22,7 +22,7 @@ interface AddClassSheetProps {
 }
 
 export default function AddClassSheet({ visible, onClose, onAdd, members, initialData }: AddClassSheetProps) {
-  const { lang, t } = useLanguage();
+  const { t } = useLanguage();
   const [name, setName] = useState('');
   const [memberId, setMemberId] = useState('');
   const [totalPrice, setTotalPrice] = useState('');

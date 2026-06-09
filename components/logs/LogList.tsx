@@ -25,7 +25,7 @@ const LogList: React.FC<LogListProps> = ({ logs, classes, members }) => {
       duration: 200,
       useNativeDriver: true,
     }).start();
-  }, []);
+  }, [fadeAnim]);
 
   const renderLogItem = (log: LogItem, index: number) => {
     const classItem = classes.find(c => c.id === log.classId);

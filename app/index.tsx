@@ -52,7 +52,6 @@ export default function DashboardPage() {
     handleDeleteMember,
     handleAddClass,
     handleUpdateClass,
-    handleDeleteClass,
     handleCheckIn,
     fetchData,
     fetchMembers,

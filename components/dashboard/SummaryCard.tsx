@@ -1,11 +1,11 @@
 import React from 'react';
 import { StyleSheet, Text, View, Pressable } from 'react-native';
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
   withTiming,
-  interpolate
 } from 'react-native-reanimated';
+
 import { COLORS } from '../../utils/colors';
 
 interface SummaryCardProps {

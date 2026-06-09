@@ -34,7 +34,7 @@ const WarningCard: React.FC<WarningCardProps> = ({ item, member, themeColor, onC
       duration: 250,
       easing: Easing.out(Easing.ease),
     });
-  }, [progress]);
+  }, [progress, progressWidth]);
 
   const cardAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
