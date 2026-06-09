@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, View, Dimensions } from 'react-native';
+import { StyleSheet, View, Dimensions } from 'react-native';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { COLORS } from '../../utils/colors';
+import SummaryCard from './SummaryCard';
 
 interface FitnessSummaryCardsProps {
   stats: {
@@ -14,24 +15,11 @@ interface FitnessSummaryCardsProps {
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CONTAINER_PADDING = 24;
+// Padding for the parent container in index.tsx is 24
+const CONTAINER_HORIZONTAL_PADDING = 24;
 const GAP = 16;
-const CARD_WIDTH = (Math.min(SCREEN_WIDTH, 430) - CONTAINER_PADDING * 2 - GAP) / 2;
-
-const SummaryCard: React.FC<{
-  icon: string;
-  value: string | number;
-  label: string;
-  color?: string;
-}> = ({ icon, value, label, color = COLORS.textPrimary }) => (
-  <View style={styles.card}>
-    <Text style={styles.icon}>{icon}</Text>
-    <Text style={[styles.value, { color }]} numberOfLines={1} adjustsFontSizeToFit>
-      {value}
-    </Text>
-    <Text style={styles.label}>{label}</Text>
-  </View>
-);
+// Calculate card width for 2x2 grid based on screen width and padding
+const CARD_WIDTH = (Math.min(SCREEN_WIDTH, 430) - CONTAINER_HORIZONTAL_PADDING * 2 - GAP) / 2;
 
 const FitnessSummaryCards: React.FC<FitnessSummaryCardsProps> = ({
   stats,
@@ -42,71 +30,51 @@ const FitnessSummaryCards: React.FC<FitnessSummaryCardsProps> = ({
 
   return (
     <View style={styles.container}>
-      <SummaryCard
-        icon="💰"
-        value={`${lang === 'zh-CN' ? '¥' : '$'}${totalSpent.toLocaleString()}`}
-        label={t.totalInvestment}
-      />
-      <SummaryCard
-        icon="📚"
-        value={totalClasses}
-        label={t.activeProjects}
-      />
-      <SummaryCard
-        icon="⏳"
-        value={totalRemaining}
-        label={t.totalRemaining}
-        color={themeColor}
-      />
-      <SummaryCard
-        icon="🗓️"
-        value={upcomingThisWeek}
-        label={t.upcomingThisWeek}
-      />
+      <View style={styles.grid}>
+        <View style={{ width: CARD_WIDTH }}>
+          <SummaryCard
+            icon="💰"
+            value={`${lang === 'zh-CN' ? '¥' : '$'}${totalSpent.toLocaleString()}`}
+            label={t.totalInvestment}
+          />
+        </View>
+        <View style={{ width: CARD_WIDTH }}>
+          <SummaryCard
+            icon="📚"
+            value={totalClasses}
+            label={t.activeProjects}
+          />
+        </View>
+        <View style={{ width: CARD_WIDTH }}>
+          <SummaryCard
+            icon="⏳"
+            value={totalRemaining}
+            label={t.totalRemaining}
+            color={themeColor}
+          />
+        </View>
+        <View style={{ width: CARD_WIDTH }}>
+          <SummaryCard
+            icon="🗓️"
+            value={upcomingThisWeek}
+            label={t.upcomingThisWeek}
+          />
+        </View>
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    marginTop: 24,
+    width: '100%',
+  },
+  grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
     gap: GAP,
-    marginTop: 24,
-  },
-  card: {
-    width: CARD_WIDTH,
-    height: 120,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    // Spec: y: 8, blur: 30, opacity: 0.08
-    shadowColor: 'rgba(0,0,0,0.08)',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1,
-    shadowRadius: 15, // Approx for 30 blur
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
-  },
-  icon: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  value: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: COLORS.textPrimary,
-    marginBottom: 2,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: COLORS.textSecondary,
-    textAlign: 'center',
+    justifyContent: 'center', // Center if screen is wider than 430px
   },
 });
 
