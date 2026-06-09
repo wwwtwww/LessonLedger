@@ -162,10 +162,10 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 13,
     fontWeight: '600',
-    color: COLORS.textLight,
+    color: COLORS.textSecondary,
   },
   activeName: {
-    color: COLORS.text,
+    color: COLORS.textPrimary,
     fontWeight: '700',
   },
 
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
   },
   addIcon: {
     fontSize: 32,
-    color: COLORS.textLight,
+    color: COLORS.textSecondary,
     fontWeight: '200',
   },
 });

@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
   appTitle: {
     fontSize: 18,
     fontWeight: '500',
-    color: COLORS.text,
+    color: COLORS.textPrimary,
     letterSpacing: -0.2,
   },
   langBtn: {
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
   langBtnText: {
     fontSize: 13,
     fontWeight: '400',
-    color: COLORS.textLight,
+    color: COLORS.textSecondary,
   },
 });
 

@@ -31,12 +31,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: COLORS.text,
+    color: COLORS.textPrimary,
     marginBottom: 8,
   },
   message: {
     fontSize: 14,
-    color: COLORS.textLight,
+    color: COLORS.textSecondary,
     textAlign: 'center',
   },
 });

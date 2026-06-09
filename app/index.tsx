@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   StatusBar
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context'; 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // UI Components
 import GlassHeader from '../components/ui/GlassHeader';
@@ -17,13 +17,11 @@ import AppHeader from '../components/ui/AppHeader';
 import FitnessSummaryCards from '../components/dashboard/FitnessSummaryCards';
 import MemberSwitcher from '../components/dashboard/MemberSwitcher';
 import WarningSection from '../components/dashboard/WarningSection';
-import AddCourseBtn from '../components/ui/AddCourseBtn';
 import LogList from '../components/logs/LogList';
 
 // Sheets (Modals)
-
-import AddMemberSheet from '../components/sheets/AddMemberSheet';   
-import AddClassSheet from '../components/sheets/AddClassSheet';     
+import AddMemberSheet from '../components/sheets/AddMemberSheet';
+import AddClassSheet from '../components/sheets/AddClassSheet';
 
 // Hooks & Utils
 import { useLanguage } from '../contexts/LanguageContext';
@@ -150,6 +148,8 @@ export default function DashboardPage() {
         ]}
         showsVerticalScrollIndicator={false}
       >
+        <FitnessSummaryCards stats={stats} themeColor={themeColor} />
+
         <MemberSwitcher
           members={members}
           currentId={currentMemberId}
@@ -158,14 +158,7 @@ export default function DashboardPage() {
           onLongPress={handleMemberLongPress}
         />
 
-        <FitnessSummaryCards stats={stats} themeColor={themeColor} />
-
         <WarningSection classes={filteredClasses} themeColor={themeColor} />
-
-        <AddCourseBtn
-          onPress={() => setIsAddClassVisible(true)}
-          color={themeColor}
-        />
 
         <LogList logs={logs} />
       </ScrollView>
@@ -206,6 +199,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 10,
-    color: COLORS.textLight,
+    color: COLORS.textSecondary,
   },
 });

@@ -51,10 +51,10 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: 24,
   },
-  sectionTitle: { 
-    fontSize: 16, 
-    fontWeight: '800', 
-    color: COLORS.text, 
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
     marginBottom: 16,
     marginLeft: 4
   },
@@ -70,17 +70,17 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderStyle: 'dashed',
   },
-  emptyLogText: { 
-    color: COLORS.textLight, 
-    textAlign: 'center', 
-    fontSize: 14 
+  emptyLogText: {
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    fontSize: 14
   },
-  logRow: { 
-    flexDirection: 'row', 
+  logRow: {
+    flexDirection: 'row',
     alignItems: 'flex-start',
-    paddingVertical: 14, 
+    paddingVertical: 14,
     paddingHorizontal: 4,
-    borderBottomWidth: StyleSheet.hairlineWidth, 
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
   },
   timeColumn: {
@@ -91,22 +91,22 @@ const styles = StyleSheet.create({
   logDate: {
     fontSize: 14,
     fontWeight: '700',
-    color: COLORS.text,
+    color: COLORS.textPrimary,
   },
-  logTime: { 
-    fontSize: 11, 
-    color: COLORS.textLight, 
+  logTime: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
     marginTop: 2,
   },
   textContainer: {
     flex: 1,
   },
-  logText: { 
-    fontSize: 14, 
+  logText: {
+    fontSize: 14,
     fontWeight: '500',
-    color: COLORS.text, 
+    color: COLORS.textPrimary,
     lineHeight: 20,
   }
-});
+  });
 
 export default LogList;

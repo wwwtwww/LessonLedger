@@ -56,7 +56,7 @@ const FitnessSummaryCards: React.FC<FitnessSummaryCardsProps> = ({
       >
         <BlurView intensity={Platform.OS === 'ios' ? 40 : 100} tint="light" style={styles.blurCard}>
           <View style={styles.content}>
-            <Text style={[styles.label, { color: COLORS.textLight }]}>{t.totalRemaining}</Text>
+            <Text style={[styles.label, { color: COLORS.textSecondary }]}>{t.totalRemaining}</Text>
             <Text style={[styles.value, { color: themeColor }]} numberOfLines={1} adjustsFontSizeToFit>
               {totalRemaining}
             </Text>

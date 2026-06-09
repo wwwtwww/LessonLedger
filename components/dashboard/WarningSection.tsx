@@ -42,7 +42,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: COLORS.textLight,
+    color: COLORS.textSecondary,
     marginBottom: 12,
     marginLeft: 4,
     textTransform: 'uppercase',
@@ -68,12 +68,12 @@ const styles = StyleSheet.create({
   className: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.text,
+    color: COLORS.textPrimary,
     flex: 1,
   },
   remainingText: {
     fontSize: 13,
-    color: COLORS.textLight,
+    color: COLORS.textSecondary,
   },
   highlight: {
     fontWeight: '800',
