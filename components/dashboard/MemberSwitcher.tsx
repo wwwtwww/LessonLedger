@@ -90,13 +90,13 @@ function SelectableItem({ isActive, onPress, onLongPress, icon, name, activeColo
   });
 
   const handlePress = () => {
-    triggerHaptic('light');
+    triggerHaptic('switchMember');
     onPress();
   };
 
   const handleLongPress = () => {
     if (onLongPress) {
-      triggerHaptic('light');
+      triggerHaptic('switchMember');
       onLongPress();
     }
   };

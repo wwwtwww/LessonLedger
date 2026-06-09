@@ -24,7 +24,7 @@ const ClassCard: React.FC<ClassCardProps> = ({ classItem, owner, onCheckIn }) =>
     : 0;
 
   const handleCheckInPress = () => {
-    triggerHaptic('light');
+    triggerHaptic('cardPress');
     if (isCompleted) {
       const errorMsg = t.noRemainingError;
       if (Platform.OS === 'web') alert(errorMsg);

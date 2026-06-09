@@ -28,7 +28,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useDashboard } from '../hooks/useDashboard';
 import { Member, ClassItem, ScheduleEntry } from '../types';
 import { requestPermissionsAsync } from '../utils/notifications';
-import { COLORS } from '../utils/colors';
+import { COLORS, SPACING } from '../utils/colors';
 
 // Constants
 const HEADER_CONTENT_HEIGHT = 72; // 与 GlassHeader.tsx 中的 content.height 保持一致
@@ -202,12 +202,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   contentContainer: {
-    paddingHorizontal: 24,
-    paddingBottom: 50,
+    paddingHorizontal: SPACING.LG,
+    paddingBottom: SPACING.XL + SPACING.MD, // 48px
     maxWidth: 430,
     width: '100%',
     alignSelf: 'center',
-    gap: 24,
+    gap: SPACING.LG,
   },
   center: {
     justifyContent: 'center',

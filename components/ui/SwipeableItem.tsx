@@ -16,13 +16,13 @@ const SwipeableItem: React.FC<SwipeableItemProps> = ({ children, onEdit, onDelet
   const swipeableRef = useRef<Swipeable>(null);
 
   const handleEdit = useCallback(() => {
-    triggerHaptic('light');
+    triggerHaptic('tap');
     swipeableRef.current?.close();
     onEdit();
   }, [onEdit]);
 
   const handleDelete = useCallback(() => {
-    triggerHaptic('medium');
+    triggerHaptic('switchMember');
     swipeableRef.current?.close();
     onDelete();
   }, [onDelete]);

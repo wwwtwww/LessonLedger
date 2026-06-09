@@ -29,7 +29,7 @@ const WarningSection: React.FC<WarningSectionProps> = ({ classes, members, theme
         const progress = item.doneLessons / item.totalLessons;
         
         const handlePress = () => {
-          triggerHaptic('medium');
+          triggerHaptic('switchMember');
           if (onCheckIn) {
             onCheckIn(item.id);
           }

@@ -9,3 +9,10 @@ export const COLORS = {
   textSecondary: '#64748B',
   border: '#E2E8F0',
 };
+
+export const SPACING = {
+  XS: 8,
+  MD: 16,
+  LG: 24,
+  XL: 32,
+};
