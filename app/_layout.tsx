@@ -1,4 +1,4 @@
-import { Stack } from "expo-router";
+import { Drawer } from 'expo-router/drawer';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { LanguageProvider } from "../contexts/LanguageContext";
@@ -10,7 +10,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <LanguageProvider>
           <BottomSheetModalProvider>
-            <Stack screenOptions={{ headerShown: false }} />
+            <Drawer screenOptions={{ headerShown: false }} />
           </BottomSheetModalProvider>
         </LanguageProvider>
       </SafeAreaProvider>
