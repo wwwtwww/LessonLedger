@@ -1,9 +1,8 @@
 import React from 'react';
 import { StyleSheet, ScrollView, TouchableOpacity, Text, View } from 'react-native';
-import Animated, { 
-  useAnimatedStyle, 
-  withTiming, 
-  Easing 
+import Animated, {
+  useAnimatedStyle,
+  withSpring,
 } from 'react-native-reanimated';
 import { Member } from '../../types';
 import { COLORS } from '../../utils/colors';
@@ -17,9 +16,14 @@ interface MemberSwitcherProps {
   onLongPress?: (member: Member) => void;
 }
 
-const ANIM_CONFIG = {
-  duration: 300,
-  easing: Easing.out(Easing.ease),
+/**
+ * 物理动效配置
+ * Damping: 20, Stiffness: 180
+ */
+const SPRING_CONFIG = {
+  damping: 20,
+  stiffness: 180,
+  mass: 1,
 };
 
 export default function MemberSwitcher({ members, currentId, onSelect, onAddPress, onLongPress }: MemberSwitcherProps) {
@@ -50,9 +54,9 @@ export default function MemberSwitcher({ members, currentId, onSelect, onAddPres
         ))}
 
         {onAddPress && (
-          <TouchableOpacity 
-            onPress={onAddPress} 
-            style={styles.addButton} 
+          <TouchableOpacity
+            onPress={onAddPress}
+            style={styles.addButton}
             activeOpacity={0.7}
           >
             <View style={styles.addIconContainer}>
@@ -78,25 +82,29 @@ function SelectableItem({ isActive, onPress, onLongPress, icon, name, activeColo
   const animatedStyle = useAnimatedStyle(() => {
     return {
       transform: [
-        { scale: withTiming(isActive ? 1.08 : 1, ANIM_CONFIG) },
+        { scale: withSpring(isActive ? 1.08 : 1, SPRING_CONFIG) },
       ],
-      borderWidth: withTiming(isActive ? 2 : 0, ANIM_CONFIG),
-      backgroundColor: withTiming(
-        isActive ? 'rgba(99,102,241,0.08)' : '#FFFFFF', 
-        ANIM_CONFIG
+      borderWidth: withSpring(isActive ? 2 : 0, SPRING_CONFIG),
+      backgroundColor: withSpring(
+        isActive ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,1)',
+        SPRING_CONFIG
       ),
-      borderColor: isActive ? (activeColor || COLORS.primary) : 'transparent',
+      borderColor: withSpring(
+        isActive ? (activeColor || COLORS.primary) : 'transparent',
+        SPRING_CONFIG
+      ),
     };
   });
 
   const handlePress = () => {
+    // 切换成员时触发 medium impact
     triggerHaptic('switchMember');
     onPress();
   };
 
   const handleLongPress = () => {
     if (onLongPress) {
-      triggerHaptic('switchMember');
+      triggerHaptic('medium');
       onLongPress();
     }
   };
@@ -111,26 +119,26 @@ function SelectableItem({ isActive, onPress, onLongPress, icon, name, activeColo
       <Animated.View style={[styles.item, animatedStyle]}>
         <Text style={styles.emoji}>{icon}</Text>
       </Animated.View>
-      <Text style={[styles.name, isActive && styles.activeName]} numberOfLines={1}>
-        {name}
-      </Text>
+      {/* 根据规范，容器高度为 88px，卡片为 72px (缩放后 ~78px)，此处不再渲染底部文字以防止视觉裁剪并保持对齐 */}
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginTop: 24,
-    height: 100, // 为下方文字留出空间
+    height: 88,
+    marginVertical: 8, // 给予适度的垂直间距
   },
   container: {
     paddingHorizontal: 24,
-    alignItems: 'flex-start',
+    alignItems: 'center', // 垂直居中确保缩放时不被裁剪
     gap: 16,
   },
   itemContainer: {
     alignItems: 'center',
+    justifyContent: 'center',
     width: 72,
+    height: 88,
   },
   item: {
     width: 72,
@@ -138,23 +146,16 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    // 默认背景色在 Animated.View 中动态控制
+    backgroundColor: '#FFFFFF',
+    // 物理动效确保无裁剪
   },
   emoji: {
     fontSize: 32,
   },
-  name: {
-    marginTop: 8,
-    fontSize: 13,
-    fontWeight: '500',
-    color: COLORS.textSecondary,
-  },
-  activeName: {
-    color: COLORS.textPrimary,
-    fontWeight: '700',
-  },
   addButton: {
     width: 72,
+    height: 88,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   addIconContainer: {
