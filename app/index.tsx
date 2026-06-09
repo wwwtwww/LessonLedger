@@ -77,7 +77,7 @@ export default function DashboardPage() {
   }, [fetchData, fetchMembers]);
 
   // 计算内容滚动的顶部偏移
-  const headerOffset = insets.top + HEADER_CONTENT_HEIGHT + 10;
+  const headerOffset = insets.top + HEADER_CONTENT_HEIGHT + 24;
 
   const onSaveMember = (data: { id?: string; name: string; icon: string; themeColor: string }) => {
     if (data.id) {

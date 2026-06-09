@@ -67,7 +67,6 @@ const FitnessSummaryCards: React.FC<FitnessSummaryCardsProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 24,
     width: '100%',
   },
   grid: {

@@ -229,6 +229,8 @@ export default function AddClassSheet({ visible, onClose, onAdd, members, initia
       onDismiss={onClose}
       backdropComponent={renderBackdrop}
       keyboardBlurBehavior="restore"
+      handleIndicatorStyle={styles.handleIndicator}
+      backgroundStyle={styles.sheetBackground}
     >
       <BottomSheetScrollView style={{ flex: 1 }}>
         {renderFormContent()}
@@ -331,8 +333,8 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
+    height: 56, // Fixed height
+    borderRadius: 16, // Fixed radius
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -345,12 +347,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   addButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#6366F1', // Primary color
   },
   addButtonText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Bottom Sheet Styles
+  handleIndicator: {
+    width: 40,
+    height: 5,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 3,
+  },
+  sheetBackground: {
+    borderRadius: 32,
   },
   // Web Specific Styles
   webOverlay: {
@@ -363,8 +375,8 @@ const styles = StyleSheet.create({
   },
   webSheet: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 32, // Fixed radius
+    borderTopRightRadius: 32, // Fixed radius
     width: '100%',
     maxWidth: 600,
     alignSelf: 'center',

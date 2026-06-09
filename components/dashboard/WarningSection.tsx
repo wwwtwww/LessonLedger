@@ -123,7 +123,7 @@ const WarningSection: React.FC<WarningSectionProps> = ({ classes, members, theme
   if (warningClasses.length === 0) return null;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { gap: 16 }]}>
       <Text style={styles.sectionTitle}>{lang === 'zh-CN' ? '课程预警' : 'Course Warning'}</Text>
       {warningClasses.map((item) => {
         const member = members.find(m => m.id === item.memberId);
@@ -145,22 +145,19 @@ const WarningSection: React.FC<WarningSectionProps> = ({ classes, members, theme
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 24,
-    marginBottom: 8,
-    paddingHorizontal: 16,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
     color: COLORS.textPrimary,
-    marginBottom: 16,
+    marginBottom: 0, // Changed from 16 since we use gap: 16 on container
   },
   card: {
     height: 160,
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     padding: 20,
-    marginBottom: 16,
+    // marginBottom removed
     ...Platform.select({
       ios: {
         shadowColor: '#000000',

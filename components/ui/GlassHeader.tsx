@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, View, Platform } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 
@@ -64,11 +64,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   content: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     height: 72, // 内容高度锁定为 72px
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
-    maxWidth: 600,
+    maxWidth: 430,
   },
 });

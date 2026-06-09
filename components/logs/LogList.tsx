@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
   View,
+  Animated,
 } from 'react-native';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { LogItem, ClassItem, Member } from '../../types';
@@ -16,15 +17,24 @@ interface LogListProps {
 
 const LogList: React.FC<LogListProps> = ({ logs, classes, members }) => {
   const { t } = useLanguage();
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   const renderLogItem = (log: LogItem, index: number) => {
     const classItem = classes.find(c => c.id === log.classId);
-    const member = members.find(m => m.id === classItem?.memberId);
-    
+    const member = members.find(m => m.id === classItem?.memberId);      
+
     // Fallback parsing if classId lookup fails
     let avatar = member?.icon || '📝';
     let courseName = classItem?.name;
-    
+
     if (!courseName) {
       // Try to parse from text: [Member] Course -> ...
       const match = log.text.match(/\[(.*?)\] (.*?) ->/);
@@ -48,14 +58,13 @@ const LogList: React.FC<LogListProps> = ({ logs, classes, members }) => {
           <Text style={styles.courseName} numberOfLines={1}>{courseName}</Text>
           <Text style={styles.timestamp}>{log.time}</Text>
         </View>
-        {/* Divider - show for all but maybe hide for the last one if preferred, but requirement says must have divider */}
         <View style={styles.divider} />
       </View>
     );
   };
 
   return (
-    <View style={styles.container}>
+    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
       <Text style={styles.sectionTitle}>{t.recentLogs}</Text>
       <View style={styles.listWrapper}>
         {logs.length === 0 ? (
@@ -66,13 +75,13 @@ const LogList: React.FC<LogListProps> = ({ logs, classes, members }) => {
           logs.map((log, index) => renderLogItem(log, index))
         )}
       </View>
-    </View>
+    </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 24,
+    // marginBottom removed to rely on parent's gap
   },
   sectionTitle: {
     fontSize: 20,
@@ -89,35 +98,36 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   avatarContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#F5F5F7',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
   },
   avatarText: {
-    fontSize: 22,
+    fontSize: 20,
   },
   contentContainer: {
     flex: 1,
     justifyContent: 'center',
   },
   courseName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: COLORS.textPrimary,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   timestamp: {
     fontSize: 13,
+    fontWeight: '400', // Regular
     color: COLORS.textSecondary,
   },
   divider: {
     position: 'absolute',
     bottom: 0,
-    left: 60, // Start after avatar (44 width + 16 margin)
+    left: 56, // Start after avatar (40 width + 16 margin)
     right: 0,
     height: StyleSheet.hairlineWidth,
     backgroundColor: COLORS.border,

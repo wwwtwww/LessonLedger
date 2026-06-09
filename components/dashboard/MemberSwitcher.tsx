@@ -118,8 +118,10 @@ function SelectableItem({ isActive, onPress, onLongPress, icon, name, activeColo
     >
       <Animated.View style={[styles.item, animatedStyle]}>
         <Text style={styles.emoji}>{icon}</Text>
+        <Text style={[styles.name, isActive && styles.activeName]} numberOfLines={1}>
+          {name}
+        </Text>
       </Animated.View>
-      {/* 根据规范，容器高度为 88px，卡片为 72px (缩放后 ~78px)，此处不再渲染底部文字以防止视觉裁剪并保持对齐 */}
     </TouchableOpacity>
   );
 }
@@ -127,10 +129,9 @@ function SelectableItem({ isActive, onPress, onLongPress, icon, name, activeColo
 const styles = StyleSheet.create({
   wrapper: {
     height: 88,
-    marginVertical: 8, // 给予适度的垂直间距
   },
   container: {
-    paddingHorizontal: 24,
+    paddingRight: 24,
     alignItems: 'center', // 垂直居中确保缩放时不被裁剪
     gap: 16,
   },
@@ -147,10 +148,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
-    // 物理动效确保无裁剪
+    padding: 8,
   },
   emoji: {
-    fontSize: 32,
+    fontSize: 24,
+    marginBottom: 2,
+  },
+  name: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  activeName: {
+    color: COLORS.textPrimary,
+    fontWeight: '800',
   },
   addButton: {
     width: 72,
