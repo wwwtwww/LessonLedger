@@ -1,7 +1,10 @@
 import React from 'react';
 import { StyleSheet, ScrollView, TouchableOpacity, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { BlurView } from 'expo-blur';
+import Animated, { 
+  useAnimatedStyle, 
+  withTiming, 
+  Easing 
+} from 'react-native-reanimated';
 import { Member } from '../../types';
 import { COLORS } from '../../utils/colors';
 import { triggerHaptic } from '../../utils/haptics';
@@ -14,9 +17,9 @@ interface MemberSwitcherProps {
   onLongPress?: (member: Member) => void;
 }
 
-const SPRING_CONFIG = {
-  damping: 18,
-  stiffness: 120,
+const ANIM_CONFIG = {
+  duration: 300,
+  easing: Easing.out(Easing.ease),
 };
 
 export default function MemberSwitcher({ members, currentId, onSelect, onAddPress, onLongPress }: MemberSwitcherProps) {
@@ -32,10 +35,9 @@ export default function MemberSwitcher({ members, currentId, onSelect, onAddPres
           onPress={() => onSelect('all')}
           icon="🌍"
           name="全部"
-          isFirst
         />
 
-        {members.map((member, index) => (
+        {members.map((member) => (
           <SelectableItem
             key={member.id}
             isActive={currentId === member.id}
@@ -50,7 +52,7 @@ export default function MemberSwitcher({ members, currentId, onSelect, onAddPres
         {onAddPress && (
           <TouchableOpacity 
             onPress={onAddPress} 
-            style={[styles.addButton, { marginLeft: -12 }]} 
+            style={styles.addButton} 
             activeOpacity={0.7}
           >
             <View style={styles.addIconContainer}>
@@ -70,17 +72,20 @@ interface SelectableItemProps {
   icon: string;
   name: string;
   activeColor?: string;
-  isFirst?: boolean;
 }
 
-function SelectableItem({ isActive, onPress, onLongPress, icon, name, activeColor, isFirst }: SelectableItemProps) {
+function SelectableItem({ isActive, onPress, onLongPress, icon, name, activeColor }: SelectableItemProps) {
   const animatedStyle = useAnimatedStyle(() => {
     return {
       transform: [
-        { scale: withSpring(isActive ? 1.05 : 1, SPRING_CONFIG) },
-        { translateY: withSpring(isActive ? -4 : 0, SPRING_CONFIG) },
+        { scale: withTiming(isActive ? 1.08 : 1, ANIM_CONFIG) },
       ],
-      zIndex: isActive ? 10 : 1,
+      borderWidth: withTiming(isActive ? 2 : 0, ANIM_CONFIG),
+      backgroundColor: withTiming(
+        isActive ? 'rgba(99,102,241,0.08)' : '#FFFFFF', 
+        ANIM_CONFIG
+      ),
+      borderColor: isActive ? (activeColor || COLORS.primary) : 'transparent',
     };
   });
 
@@ -97,90 +102,70 @@ function SelectableItem({ isActive, onPress, onLongPress, icon, name, activeColo
   };
 
   return (
-    <Animated.View style={[
-      styles.itemWrapper,
-      !isFirst && { marginLeft: -12 },
-      animatedStyle
-    ]}>
-      <TouchableOpacity
-        onPress={handlePress}
-        onLongPress={handleLongPress}
-        activeOpacity={0.9}
-        style={styles.touchable}
-      >
-        <BlurView
-          intensity={isActive ? 90 : 60}
-          tint="light"
-          style={[
-            styles.item,
-            { borderColor: isActive ? (activeColor || COLORS.primary) : 'transparent' }
-          ]}
-        >
-          <Text style={styles.emoji}>{icon}</Text>
-          <Text
-            style={[styles.name, isActive && styles.activeName]}
-            numberOfLines={1}
-          >
-            {name}
-          </Text>
-        </BlurView>
-      </TouchableOpacity>
-    </Animated.View>
+    <TouchableOpacity
+      onPress={handlePress}
+      onLongPress={handleLongPress}
+      activeOpacity={0.9}
+      style={styles.itemContainer}
+    >
+      <Animated.View style={[styles.item, animatedStyle]}>
+        <Text style={styles.emoji}>{icon}</Text>
+      </Animated.View>
+      <Text style={[styles.name, isActive && styles.activeName]} numberOfLines={1}>
+        {name}
+      </Text>
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginBottom: 24,
-    overflow: 'visible',
+    marginTop: 24,
+    height: 100, // 为下方文字留出空间
   },
   container: {
     paddingHorizontal: 24,
+    alignItems: 'flex-start',
+    gap: 16,
+  },
+  itemContainer: {
     alignItems: 'center',
-    paddingBottom: 8, // 为 translateY 提供空间
-  },
-  itemWrapper: {
-    // 移除所有阴影以遵循极简规范
-  },
-  touchable: {
-    borderRadius: 24,
+    width: 72,
   },
   item: {
-    width: 86,
-    height: 100,
+    width: 72,
+    height: 72,
     borderRadius: 24,
-    borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    // 默认背景色在 Animated.View 中动态控制
   },
   emoji: {
-    fontSize: 28,
-    marginBottom: 6,
+    fontSize: 32,
   },
   name: {
+    marginTop: 8,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     color: COLORS.textSecondary,
   },
   activeName: {
     color: COLORS.textPrimary,
     fontWeight: '700',
   },
-
   addButton: {
-    zIndex: 0,
+    width: 72,
+    alignItems: 'center',
   },
   addIconContainer: {
-    width: 60,
-    height: 100,
+    width: 72,
+    height: 72,
     borderRadius: 24,
     backgroundColor: 'rgba(0,0,0,0.03)',
     alignItems: 'center',
     justifyContent: 'center',
     borderStyle: 'dashed',
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: COLORS.border,
   },
   addIcon: {
