@@ -30,4 +30,5 @@ export interface LogItem {
   id: string;
   time: string;
   text: string;
+  classId?: string;
 }

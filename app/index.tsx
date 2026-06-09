@@ -55,7 +55,8 @@ export default function DashboardPage() {
     handleDeleteClass,
     handleCheckIn,
     fetchData,
-    fetchMembers
+    fetchMembers,
+    allClasses
   } = useDashboard();
 
   const [isAddMemberVisible, setIsAddMemberVisible] = useState(false);
@@ -158,9 +159,24 @@ export default function DashboardPage() {
           onLongPress={handleMemberLongPress}
         />
 
-        <WarningSection classes={filteredClasses} themeColor={themeColor} />
+        <WarningSection 
+          classes={filteredClasses} 
+          members={members}
+          themeColor={themeColor} 
+          onCheckIn={(classId) => {
+            const cls = filteredClasses.find(c => c.id === classId);
+            if (cls) {
+              const m = members.find(mem => mem.id === cls.memberId);
+              handleCheckIn(classId, cls.name, m?.name || '未知');
+            }
+          }}
+        />
 
-        <LogList logs={logs} />
+        <LogList 
+          logs={logs} 
+          classes={allClasses}
+          members={members}
+        />
       </ScrollView>
 
       <AddMemberSheet

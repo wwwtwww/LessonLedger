@@ -49,6 +49,7 @@ export function useDashboard() {
     activeMember: dashboardStats.activeMember,
     themeColor: dashboardStats.themeColor,
     classes: filteredClasses, // 覆盖原始 classes，导出过滤后的结果
+    allClasses: classHook.classes,
     isLoading: memberHook.isLoading || classHook.isLoading
   };
 }
