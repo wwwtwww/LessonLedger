@@ -31,7 +31,7 @@ import { requestPermissionsAsync } from '../utils/notifications';
 import { COLORS } from '../utils/colors';
 
 // Constants
-const HEADER_CONTENT_HEIGHT = 60; // 与 GlassHeader.tsx 中的 content.height 保持一致
+const HEADER_CONTENT_HEIGHT = 72; // 与 GlassHeader.tsx 中的 content.height 保持一致
 
 export default function DashboardPage() {
   const insets = useSafeAreaInsets();
