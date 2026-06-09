@@ -16,6 +16,7 @@ import GlassHeader from '../components/ui/GlassHeader';
 import AppHeader from '../components/ui/AppHeader';
 import FitnessSummaryCards from '../components/dashboard/FitnessSummaryCards';
 import MemberSwitcher from '../components/dashboard/MemberSwitcher';
+import WarningSection from '../components/dashboard/WarningSection';
 import AddCourseBtn from '../components/ui/AddCourseBtn';
 import LogList from '../components/logs/LogList';
 
@@ -149,8 +150,6 @@ export default function DashboardPage() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <FitnessSummaryCards stats={stats} themeColor={themeColor} />
-
         <MemberSwitcher
           members={members}
           currentId={currentMemberId}
@@ -158,6 +157,10 @@ export default function DashboardPage() {
           onAddPress={() => setIsAddMemberVisible(true)}
           onLongPress={handleMemberLongPress}
         />
+
+        <FitnessSummaryCards stats={stats} themeColor={themeColor} />
+
+        <WarningSection classes={filteredClasses} themeColor={themeColor} />
 
         <AddCourseBtn
           onPress={() => setIsAddClassVisible(true)}

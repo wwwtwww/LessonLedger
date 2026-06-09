@@ -4,42 +4,109 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { useLanguage } from '../../contexts/LanguageContext'; 
 import { LogItem } from '../../types';
+import { COLORS } from '../../utils/colors';
 
 interface LogListProps {
   logs: LogItem[];
 }
 
-const LogList: React.FC<LogListProps> = ({ logs }) => {
+const LogList: React.FC<LogListProps> = ({ logs }) => {       
   const { t } = useLanguage();
 
   return (
-    <>
-      <Text style={styles.sectionTitle}>{t.historyLog}</Text>
-      <View style={styles.logContainer}>
+    <View style={styles.container}>
+      <Text style={styles.sectionTitle}>{t.historyLog}</Text> 
+      <View style={styles.listWrapper}>
         {logs.length === 0 ? (
-          <Text style={styles.emptyLogText}>{t.noLog}</Text>
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyLogText}>{t.noLog}</Text>  
+          </View>
         ) : (
-          logs.map(log => (
-            <View key={log.id} style={styles.logTextRow}>
-              <Text style={styles.logTime}>{log.time}</Text>
-              <Text style={styles.logText}>✅ {log.text}</Text>
+          logs.map((log, index) => (
+            <View 
+              key={log.id} 
+              style={[
+                styles.logRow, 
+                index === logs.length - 1 && { borderBottomWidth: 0 }
+              ]}
+            >     
+              <View style={styles.timeColumn}>
+                <Text style={styles.logDate}>{log.time.split(' ')[0].substring(5)}</Text>
+                <Text style={styles.logTime}>{log.time.split(' ')[1]?.substring(0, 5)}</Text>
+              </View>
+              <View style={styles.textContainer}>
+                <Text style={styles.logText}>✅ {log.text}</Text>
+              </View>
             </View>
           ))
         )}
       </View>
-    </>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#334155', marginBottom: 10 },
-  logContainer: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: '#E2E8F0' },
-  emptyLogText: { color: '#94A3B8', textAlign: 'center', fontSize: 12, paddingVertical: 10 },
-  logTextRow: { borderBottomWidth: 1, borderBottomColor: '#F1F5F9', paddingVertical: 8, flexDirection: 'row', justifyContent: 'space-between' },
-  logTime: { fontSize: 11, color: '#94A3B8', width: 110 },
-  logText: { fontSize: 13, fontWeight: '600', color: '#334155', flex: 1 }
+  container: {
+    marginBottom: 24,
+  },
+  sectionTitle: { 
+    fontSize: 16, 
+    fontWeight: '800', 
+    color: COLORS.text, 
+    marginBottom: 16,
+    marginLeft: 4
+  },
+  listWrapper: {
+    // No background card here, just linear on background
+  },
+  emptyContainer: {
+    padding: 24,
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
+    borderStyle: 'dashed',
+  },
+  emptyLogText: { 
+    color: COLORS.textLight, 
+    textAlign: 'center', 
+    fontSize: 14 
+  },
+  logRow: { 
+    flexDirection: 'row', 
+    alignItems: 'flex-start',
+    paddingVertical: 14, 
+    paddingHorizontal: 4,
+    borderBottomWidth: StyleSheet.hairlineWidth, 
+    borderBottomColor: COLORS.border,
+  },
+  timeColumn: {
+    width: 60,
+    marginRight: 16,
+    alignItems: 'flex-start',
+  },
+  logDate: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  logTime: { 
+    fontSize: 11, 
+    color: COLORS.textLight, 
+    marginTop: 2,
+  },
+  textContainer: {
+    flex: 1,
+  },
+  logText: { 
+    fontSize: 14, 
+    fontWeight: '500',
+    color: COLORS.text, 
+    lineHeight: 20,
+  }
 });
 
 export default LogList;

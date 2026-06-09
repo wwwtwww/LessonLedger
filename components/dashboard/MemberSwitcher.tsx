@@ -132,7 +132,7 @@ function SelectableItem({ isActive, onPress, onLongPress, icon, name, activeColo
 
 const styles = StyleSheet.create({
   wrapper: {
-    paddingVertical: 20,
+    marginBottom: 24,
     overflow: 'visible',
   },
   container: {

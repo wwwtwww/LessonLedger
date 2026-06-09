@@ -26,7 +26,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 24,
   },
   addCourseBtnText: {
     color: '#FFFFFF',
