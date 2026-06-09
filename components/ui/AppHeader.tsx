@@ -12,19 +12,21 @@ const AppHeader: React.FC<AppHeaderProps> = ({ themeColor }) => {
 
   return (
     <View style={styles.topBar}>
-      {/* 左侧：极简标题，单行排版 */}
+      {/* 左侧：Logo (Title) */}
       <View style={styles.titleGroup}>
         <Text style={[styles.appTitle, themeColor ? { color: themeColor } : null]}>
           {t.title}
         </Text>
       </View>
 
-      {/* 右侧：语言切换按钮 (纯线性极简风格) */}
+      {/* 右侧：语言切换按钮 (极简风格) */}
       <TouchableOpacity
-        style={[styles.langBtn, themeColor ? { borderColor: themeColor } : null]}     
+        style={styles.langBtn}     
         onPress={toggleLang}
       >
-        <Text style={styles.langBtnText}>🌐 {t.switchLang}</Text>
+        <Text style={styles.langBtnText}>
+          {t.switchLang.toUpperCase()}
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -42,22 +44,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   appTitle: {
-    fontSize: 18,
-    fontWeight: '500',
+    fontSize: 32, // 规范要求 Page Title 32
+    fontWeight: '700', // Bold
     color: COLORS.text,
-    letterSpacing: -0.2,
+    letterSpacing: -1,
   },
   langBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    paddingVertical: 8,
   },
   langBtnText: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: COLORS.textLight,
+    fontSize: 15, // 规范 Body 15
+    fontWeight: '600',
+    color: COLORS.primary,
   },
 });
 

@@ -21,7 +21,6 @@ import AddCourseBtn from '../components/ui/AddCourseBtn';
 import LogList from '../components/logs/LogList';
 
 // Sheets (Modals)
-
 import AddMemberSheet from '../components/sheets/AddMemberSheet';   
 import AddClassSheet from '../components/sheets/AddClassSheet';     
 
@@ -32,14 +31,10 @@ import { Member, ClassItem, ScheduleEntry } from '../types';
 import { requestPermissionsAsync } from '../utils/notifications';
 import { COLORS } from '../utils/colors';
 
-// Constants
-const HEADER_CONTENT_HEIGHT = 60; // 与 GlassHeader.tsx 中的 content.height 保持一致
-
 export default function DashboardPage() {
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
 
-  // 使用聚合后的 useDashboard Hook
   const {
     members,
     currentMemberId,
@@ -65,7 +60,6 @@ export default function DashboardPage() {
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [editingClass, setEditingClass] = useState<ClassItem | null>(null);
 
-  // 初始化加载
   useEffect(() => {
     const initApp = async () => {
       await requestPermissionsAsync();
@@ -76,9 +70,6 @@ export default function DashboardPage() {
     };
     initApp();
   }, [fetchData, fetchMembers]);
-
-  // 计算内容滚动的顶部偏移
-  const headerOffset = insets.top + HEADER_CONTENT_HEIGHT + 10;
 
   const onSaveMember = (data: { id?: string; name: string; icon: string; themeColor: string }) => {
     if (data.id) {
@@ -138,18 +129,23 @@ export default function DashboardPage() {
         translucent
       />
 
-      <GlassHeader>
-        <AppHeader themeColor={themeColor} />
-      </GlassHeader>
-
       <ScrollView
         style={styles.container}
         contentContainerStyle={[
           styles.contentContainer,
-          { paddingTop: headerOffset }
+          { paddingBottom: 50 + insets.bottom }
         ]}
         showsVerticalScrollIndicator={false}
       >
+        {/* 1 Header */}
+        <GlassHeader>
+          <AppHeader themeColor={themeColor} />
+        </GlassHeader>
+
+        {/* 2 Summary Cards */}
+        <FitnessSummaryCards stats={stats} themeColor={themeColor} />
+
+        {/* 3 Member Switcher */}
         <MemberSwitcher
           members={members}
           currentId={currentMemberId}
@@ -158,8 +154,7 @@ export default function DashboardPage() {
           onLongPress={handleMemberLongPress}
         />
 
-        <FitnessSummaryCards stats={stats} themeColor={themeColor} />
-
+        {/* 4 Warning Courses */}
         <WarningSection classes={filteredClasses} themeColor={themeColor} />
 
         <AddCourseBtn
@@ -167,6 +162,7 @@ export default function DashboardPage() {
           color={themeColor}
         />
 
+        {/* 5 Recent Logs */}
         <LogList logs={logs} />
       </ScrollView>
 
@@ -193,11 +189,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   contentContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 50,
-    maxWidth: 600,
+    maxWidth: 430, // Spec: 430
     width: '100%',
     alignSelf: 'center',
+    paddingHorizontal: 24, // Spec: 24
   },
   center: {
     justifyContent: 'center',
