@@ -1,8 +1,8 @@
 import React from 'react';
-import { StyleSheet, View, Dimensions } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { COLORS } from '../../utils/colors';
-import SummaryCard from './SummaryCard';
 
 interface FitnessSummaryCardsProps {
   stats: {
@@ -14,52 +14,49 @@ interface FitnessSummaryCardsProps {
   themeColor?: string;
 }
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-// Padding for the parent container in index.tsx is 24
-const CONTAINER_HORIZONTAL_PADDING = 24;
-const GAP = 16;
-// Calculate card width for 2x2 grid based on screen width and padding
-const CARD_WIDTH = (Math.min(SCREEN_WIDTH, 430) - CONTAINER_HORIZONTAL_PADDING * 2 - GAP) / 2;
-
 const FitnessSummaryCards: React.FC<FitnessSummaryCardsProps> = ({
   stats,
   themeColor = COLORS.primary,
 }) => {
-  const { lang, t } = useLanguage();
-  const { totalSpent, totalClasses, totalRemaining, upcomingThisWeek } = stats;
+  const { lang } = useLanguage();
+  const { totalSpent, totalClasses, totalRemaining } = stats;
+  const router = useRouter();
 
   return (
     <View style={styles.container}>
-      <View style={styles.grid}>
-        <View style={{ width: CARD_WIDTH }}>
-          <SummaryCard
-            icon="💰"
-            value={`${lang === 'zh-CN' ? '¥' : '$'}${totalSpent.toLocaleString()}`}
-            label={t.totalInvestment}
-          />
+      <View style={styles.unifiedCard}>
+        {/* Column 1: Total Spent */}
+        <View style={styles.column}>
+          <View style={[styles.iconWrapper, { backgroundColor: '#F0F9FF' }]}>
+            <Text style={styles.iconText}>¥</Text>
+          </View>
+          <Text style={styles.label}>{lang === 'zh-CN' ? '总支出' : 'Total Expense'}</Text>
+          <Text style={[styles.value, { color: '#0F172A' }]}>
+            {lang === 'zh-CN' ? '¥' : '$'}{totalSpent.toLocaleString()}
+          </Text>
         </View>
-        <View style={{ width: CARD_WIDTH }}>
-          <SummaryCard
-            icon="📚"
-            value={totalClasses}
-            label={t.activeProjects}
-          />
+
+        {/* Column 2: Total Classes */}
+        <View style={styles.column}>
+          <View style={[styles.iconWrapper, { backgroundColor: '#F0FDF4' }]}>
+            <Text style={styles.iconText}>✓</Text>
+          </View>
+          <Text style={styles.label}>{lang === 'zh-CN' ? '总消耗课时' : 'Consumed'}</Text>
+          <Text style={[styles.value, { color: '#22C55E' }]}>{totalClasses}</Text>
         </View>
-        <View style={{ width: CARD_WIDTH }}>
-          <SummaryCard
-            icon="⏳"
-            value={totalRemaining}
-            label={t.totalRemaining}
-            color={themeColor}
-          />
-        </View>
-        <View style={{ width: CARD_WIDTH }}>
-          <SummaryCard
-            icon="🗓️"
-            value={upcomingThisWeek}
-            label={t.upcomingThisWeek}
-          />
-        </View>
+
+        {/* Column 3: Total Remaining (Navigates to Courses) */}
+        <TouchableOpacity 
+          style={styles.column} 
+          onPress={() => router.push('/courses')}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.iconWrapper, { backgroundColor: '#EEF2FF' }]}>
+            <Text style={styles.iconText}>⏳</Text>
+          </View>
+          <Text style={styles.label}>{lang === 'zh-CN' ? '剩余课时' : 'Remaining'}</Text>
+          <Text style={[styles.value, { color: '#6366F1' }]}>{totalRemaining}</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -69,11 +66,45 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
   },
-  grid: {
+  unifiedCard: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: GAP,
-    justifyContent: 'center', // Center if screen is wider than 430px
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 15,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.02)',
+  },
+  column: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  iconWrapper: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  iconText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  label: {
+    fontSize: 12,
+    color: '#64748B',
+    marginBottom: 4,
+  },
+  value: {
+    fontSize: 18,
+    fontWeight: '700',
   },
 });
 

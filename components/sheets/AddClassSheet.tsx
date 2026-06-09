@@ -12,6 +12,8 @@ import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@g
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Member, ClassItem, ScheduleEntry } from '../../types';
 import SchedulePicker from '../ui/SchedulePicker';
+import { Feather } from '@expo/vector-icons';
+import { COLORS } from '../../utils/colors';
 
 interface AddClassSheetProps {
   visible: boolean;
@@ -22,7 +24,8 @@ interface AddClassSheetProps {
 }
 
 export default function AddClassSheet({ visible, onClose, onAdd, members, initialData }: AddClassSheetProps) {
-  const { t } = useLanguage();
+  const { lang } = useLanguage();
+  const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [memberId, setMemberId] = useState('');
   const [totalPrice, setTotalPrice] = useState('');
@@ -35,7 +38,6 @@ export default function AddClassSheet({ visible, onClose, onAdd, members, initia
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ['90%'], []);
 
-  // Native Side: Sync BottomSheet
   useEffect(() => {
     if (Platform.OS !== 'web') {
       if (visible) {
@@ -53,9 +55,9 @@ export default function AddClassSheet({ visible, onClose, onAdd, members, initia
     []
   );
 
-  // Reset state when modal opens
   useEffect(() => {
     if (visible && !prevVisible.current) {
+      setStep(1);
       if (initialData) {
         setName(initialData.name);
         setMemberId(initialData.memberId);
@@ -83,12 +85,20 @@ export default function AddClassSheet({ visible, onClose, onAdd, members, initia
     prevVisible.current = visible;
   }, [visible, initialData, members]);
 
-  const handleAdd = () => {
+  const handleNext = () => {
     if (!name.trim() || !memberId || !totalPrice || !totalLessons) {
-      setError(t.allFieldsRequired || 'All fields are required');
+      setError(lang === 'zh-CN' ? '请填写完整信息' : 'All fields are required');
       return;
     }
-    
+    setError('');
+    setStep(2);
+  };
+
+  const handleSaveSchedule = () => {
+    setStep(3);
+  };
+
+  const handleAdd = () => {
     onAdd({
       ...(initialData?.id ? { id: initialData.id } : {}),
       name: name.trim(),
@@ -100,127 +110,192 @@ export default function AddClassSheet({ visible, onClose, onAdd, members, initia
     });
   };
 
-  const renderFormContent = () => (
-    <View style={styles.modalContent}>
-      <Text style={styles.title}>
-        {initialData ? t.editCourseTitle : t.addCourseTitle}
-      </Text>
+  const getMemberName = () => members.find(m => m.id === memberId)?.name || '';
+
+  const renderStep1 = () => (
+    <View style={styles.stepContainer}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onClose} style={styles.iconBtn}>
+          <Feather name="x" size={24} color={COLORS.textPrimary} />
+        </TouchableOpacity>
+        <Text style={styles.title}>{initialData ? (lang === 'zh-CN' ? '编辑课程' : 'Edit Course') : (lang === 'zh-CN' ? '添加课程' : 'Add Course')}</Text>
+        <View style={styles.iconBtn} />
+      </View>
         
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>{t.courseName || 'Course Name'}</Text>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>{lang === 'zh-CN' ? '课程名称' : 'Course Name'}</Text>
         <TextInput
           style={styles.input}
           value={name}
           onChangeText={setName}
-          placeholder="e.g. Piano"
-          placeholderTextColor="#9ca3af"
+          placeholder={lang === 'zh-CN' ? "请输入课程名称" : "Course Name"}
+          placeholderTextColor="#94A3B8"
         />
       </View>
 
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>{t.bindMember || 'Bind Member'}</Text>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>{lang === 'zh-CN' ? '选择成员' : 'Select Member'}</Text>
         <View style={styles.memberPicker}>
-          {members.map((m) => (
-            <TouchableOpacity
-              key={m.id}
-              style={[
-                styles.memberChip,
-                memberId === m.id && { backgroundColor: m.themeColor, borderColor: m.themeColor },
-              ]}
-              onPress={() => setMemberId(m.id)}
-            >
-              <Text style={[styles.memberChipText, memberId === m.id && { color: '#fff' }]}>
-                {m.icon} {m.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          <TouchableOpacity style={styles.selectRow}>
+            <Text style={styles.selectText}>{getMemberName() || (lang === 'zh-CN' ? '请选择' : 'Select')}</Text>
+            <Feather name="chevron-right" size={20} color="#94A3B8" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>{lang === 'zh-CN' ? '单位类型' : 'Unit Type'}</Text>
+        <View style={styles.unitTabs}>
+          <TouchableOpacity 
+            style={[styles.unitTab, unitType === 'lesson' && styles.unitTabActive]} 
+            onPress={() => setUnitType('lesson')}
+          >
+            <Text style={[styles.unitTabText, unitType === 'lesson' && styles.unitTabTextActive]}>{lang === 'zh-CN' ? '课时' : 'Lessons'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.unitTab, unitType === 'session' && styles.unitTabActive]} 
+            onPress={() => setUnitType('session')}
+          >
+            <Text style={[styles.unitTabText, unitType === 'session' && styles.unitTabTextActive]}>{lang === 'zh-CN' ? '次数' : 'Sessions'}</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
       <View style={styles.row}>
-        <View style={[styles.inputContainer, { flex: 1, marginRight: 10 }]}>
-          <Text style={styles.label}>{t.cost || 'Total Cost'}</Text>
-          <TextInput
-            style={styles.input}
-            value={totalPrice}
-            onChangeText={setTotalPrice}
-            keyboardType="numeric"
-            placeholder="0"
-            placeholderTextColor="#9ca3af"
-          />
-        </View>
-        <View style={[styles.inputContainer, { flex: 1 }]}>
-          <Text style={styles.label}>{t.totalHours || 'Total Lessons'}</Text>
+        <View style={[styles.inputGroup, { flex: 1, marginRight: 16 }]}>
+          <Text style={styles.label}>{lang === 'zh-CN' ? '总课时' : 'Total Lessons'}</Text>
           <TextInput
             style={styles.input}
             value={totalLessons}
             onChangeText={setTotalLessons}
             keyboardType="numeric"
             placeholder="0"
-            placeholderTextColor="#9ca3af"
+          />
+        </View>
+        <View style={[styles.inputGroup, { flex: 1 }]}>
+          <Text style={styles.label}>{lang === 'zh-CN' ? '总费用 (元)' : 'Total Cost'}</Text>
+          <TextInput
+            style={styles.input}
+            value={totalPrice}
+            onChangeText={setTotalPrice}
+            keyboardType="numeric"
+            placeholder="0"
           />
         </View>
       </View>
 
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>{t.unitLabel || 'Unit Type'}</Text>
-        <View style={styles.unitPicker}>
-          <TouchableOpacity 
-            style={[styles.unitBtn, unitType === 'lesson' && styles.unitBtnActive]} 
-            onPress={() => setUnitType('lesson')}
-          >
-            <Text style={[styles.unitBtnText, unitType === 'lesson' && styles.unitBtnTextActive]}>{t.unitLesson}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.unitBtn, unitType === 'session' && styles.unitBtnActive]} 
-            onPress={() => setUnitType('session')}
-          >
-            <Text style={[styles.unitBtnText, unitType === 'session' && styles.unitBtnTextActive]}>{t.unitSession}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>{t.schedule || 'Schedule'}</Text>
-        <SchedulePicker value={schedule} onChange={setSchedule} />
-      </View>
-
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      <View style={styles.actions}>
-        <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onClose}>
-          <Text style={styles.cancelButtonText}>{t.cancel || 'Cancel'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.button, styles.addButton]} onPress={handleAdd}>
-          <Text style={styles.addButtonText}>
-            {initialData ? t.save : t.add}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity style={styles.primaryBtn} onPress={handleNext}>
+        <Text style={styles.primaryBtnText}>{lang === 'zh-CN' ? '下一步: 设置时间' : 'Next: Set Time'}</Text>
+      </TouchableOpacity>
     </View>
   );
 
-  // Web Fallback
+  const renderStep2 = () => (
+    <View style={styles.stepContainer}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onClose} style={styles.iconBtn}>
+          <Feather name="x" size={24} color={COLORS.textPrimary} />
+        </TouchableOpacity>
+        <Text style={styles.title}>{lang === 'zh-CN' ? '设置上课时间' : 'Set Schedule'}</Text>
+        <View style={styles.iconBtn} />
+      </View>
+
+      <SchedulePicker value={schedule} onChange={setSchedule} />
+
+      <TouchableOpacity style={[styles.primaryBtn, { marginTop: 24 }]} onPress={handleSaveSchedule}>
+        <Text style={styles.primaryBtnText}>{lang === 'zh-CN' ? '保存' : 'Save'}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderStep3 = () => (
+    <View style={styles.stepContainer}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onClose} style={styles.iconBtn}>
+          <Feather name="x" size={24} color={COLORS.textPrimary} />
+        </TouchableOpacity>
+        <Text style={styles.title}>{lang === 'zh-CN' ? '添加课程' : 'Add Course'}</Text>
+        <View style={styles.iconBtn} />
+      </View>
+
+      <View style={styles.summaryList}>
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>{lang === 'zh-CN' ? '课程名称' : 'Course Name'}</Text>
+          <View style={styles.summaryValueRow}>
+            <Text style={styles.summaryValue}>{name}</Text>
+            <Feather name="chevron-right" size={20} color="#94A3B8" />
+          </View>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>{lang === 'zh-CN' ? '选择成员' : 'Member'}</Text>
+          <View style={styles.summaryValueRow}>
+            <Text style={styles.summaryValue}>{getMemberName()}</Text>
+            <Feather name="chevron-right" size={20} color="#94A3B8" />
+          </View>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>{lang === 'zh-CN' ? '单位类型' : 'Unit Type'}</Text>
+          <View style={styles.summaryValueRow}>
+            <Text style={styles.summaryValue}>{unitType === 'lesson' ? (lang === 'zh-CN' ? '课时' : 'Lesson') : (lang === 'zh-CN' ? '次数' : 'Session')}</Text>
+            <Feather name="chevron-right" size={20} color="#94A3B8" />
+          </View>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>{lang === 'zh-CN' ? '总课时' : 'Total Lessons'}</Text>
+          <View style={styles.summaryValueRow}>
+            <Text style={styles.summaryValue}>{totalLessons}</Text>
+            <Feather name="chevron-right" size={20} color="#94A3B8" />
+          </View>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>{lang === 'zh-CN' ? '总费用' : 'Total Cost'}</Text>
+          <View style={styles.summaryValueRow}>
+            <Text style={styles.summaryValue}>{totalPrice}</Text>
+            <Feather name="chevron-right" size={20} color="#94A3B8" />
+          </View>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.summaryRow}>
+          <View>
+            <Text style={styles.summaryLabel}>{lang === 'zh-CN' ? '上课时间' : 'Schedule'}</Text>
+            <Text style={styles.summarySub}>{schedule.length} rules set</Text>
+          </View>
+          <Feather name="chevron-right" size={20} color="#94A3B8" />
+        </View>
+      </View>
+
+      <TouchableOpacity style={styles.primaryBtn} onPress={handleAdd}>
+        <Text style={styles.primaryBtnText}>{lang === 'zh-CN' ? '保存课程' : 'Save Course'}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderContent = () => {
+    if (step === 1) return renderStep1();
+    if (step === 2) return renderStep2();
+    if (step === 3) return renderStep3();
+  };
+
   if (Platform.OS === 'web') {
     return (
-      <Modal
-        visible={visible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={onClose}
-      >
+      <Modal visible={visible} transparent={true} animationType="slide" onRequestClose={onClose}>
         <View style={styles.webOverlay}>
           <TouchableOpacity style={styles.webDismissArea} activeOpacity={1} onPress={onClose} />
           <View style={[styles.webSheet, { paddingBottom: 40 }]}>
-            <View style={styles.webHandle} />
-            {renderFormContent()}
+            <View style={styles.handle} />
+            {renderContent()}
           </View>
         </View>
       </Modal>
     );
   }
 
-  // Native: BottomSheet
   return (
     <BottomSheetModal
       ref={bottomSheetModalRef}
@@ -229,165 +304,45 @@ export default function AddClassSheet({ visible, onClose, onAdd, members, initia
       onDismiss={onClose}
       backdropComponent={renderBackdrop}
       keyboardBlurBehavior="restore"
-      handleIndicatorStyle={styles.handleIndicator}
+      handleIndicatorStyle={styles.handle}
       backgroundStyle={styles.sheetBackground}
     >
       <BottomSheetScrollView style={{ flex: 1 }}>
-        {renderFormContent()}
+        {renderContent()}
       </BottomSheetScrollView>
     </BottomSheetModal>
   );
 }
 
 const styles = StyleSheet.create({
-  modalContent: {
-    paddingHorizontal: 24,
-    paddingBottom: 24,
-    paddingTop: 8,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#1f2937',
-    textAlign: 'center',
-  },
-  inputContainer: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#4b5563',
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    color: '#1f2937',
-    backgroundColor: '#f9fafb',
-  },
-  memberPicker: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  memberChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    backgroundColor: '#fff',
-  },
-  memberChipText: {
-    fontSize: 14,
-    color: '#4b5563',
-  },
-  row: {
-    flexDirection: 'row',
-  },
-  unitPicker: {
-    flexDirection: 'row',
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    padding: 4,
-  },
-  unitBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: 6,
-  },
-  unitBtnActive: {
-    backgroundColor: '#fff',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-  },
-  unitBtnText: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '600',
-  },
-  unitBtnTextActive: {
-    color: '#0F172A',
-  },
-  errorText: {
-    color: '#ef4444',
-    fontSize: 12,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
-    gap: 12,
-  },
-  button: {
-    flex: 1,
-    height: 56, // Fixed height
-    borderRadius: 16, // Fixed radius
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButton: {
-    backgroundColor: '#f3f4f6',
-  },
-  cancelButtonText: {
-    color: '#4b5563',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  addButton: {
-    backgroundColor: '#6366F1', // Primary color
-  },
-  addButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  // Bottom Sheet Styles
-  handleIndicator: {
-    width: 40,
-    height: 5,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 3,
-  },
-  sheetBackground: {
-    borderRadius: 32,
-  },
-  // Web Specific Styles
-  webOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  webDismissArea: {
-    flex: 1,
-  },
-  webSheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32, // Fixed radius
-    borderTopRightRadius: 32, // Fixed radius
-    width: '100%',
-    maxWidth: 600,
-    alignSelf: 'center',
-  },
-  webHandle: {
-    width: 40,
-    height: 5,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 3,
-    alignSelf: 'center',
-    marginTop: 10,
-    marginBottom: 5,
-  },
+  stepContainer: { paddingHorizontal: 24, paddingBottom: 24 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
+  title: { fontSize: 18, fontWeight: '600', color: COLORS.textPrimary },
+  iconBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
+  inputGroup: { marginBottom: 20 },
+  label: { fontSize: 14, color: '#64748B', marginBottom: 8 },
+  input: { borderBottomWidth: 1, borderBottomColor: '#E2E8F0', paddingVertical: 12, fontSize: 16, color: COLORS.textPrimary },
+  selectRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', paddingVertical: 12 },
+  selectText: { fontSize: 16, color: COLORS.textPrimary },
+  unitTabs: { flexDirection: 'row', backgroundColor: '#F1F5F9', borderRadius: 12, padding: 4 },
+  unitTab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8 },
+  unitTabActive: { backgroundColor: COLORS.primary },
+  unitTabText: { fontSize: 14, color: COLORS.textSecondary, fontWeight: '500' },
+  unitTabTextActive: { color: '#FFFFFF' },
+  row: { flexDirection: 'row' },
+  primaryBtn: { backgroundColor: COLORS.primary, height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginTop: 20 },
+  primaryBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  errorText: { color: '#EF4444', fontSize: 12, marginBottom: 16, textAlign: 'center' },
+  summaryList: { backgroundColor: '#F8FAFC', borderRadius: 20, padding: 16, marginBottom: 24 },
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12 },
+  summaryLabel: { fontSize: 15, color: COLORS.textSecondary },
+  summaryValueRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  summaryValue: { fontSize: 15, color: COLORS.textPrimary, fontWeight: '500' },
+  summarySub: { fontSize: 13, color: '#94A3B8', marginTop: 4 },
+  divider: { height: 1, backgroundColor: '#E2E8F0' },
+  handle: { width: 40, height: 5, backgroundColor: '#E2E8F0', borderRadius: 3, alignSelf: 'center', marginTop: 10, marginBottom: 16 },
+  sheetBackground: { borderRadius: 32 },
+  webOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  webDismissArea: { flex: 1 },
+  webSheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 32, borderTopRightRadius: 32, width: '100%', maxWidth: 600, alignSelf: 'center' },
 });

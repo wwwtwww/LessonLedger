@@ -7,9 +7,11 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
-  StatusBar
+  StatusBar,
+  TouchableOpacity
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 // UI Components
 import GlassHeader from '../components/ui/GlassHeader';
@@ -36,6 +38,7 @@ const HEADER_CONTENT_HEIGHT = 72; // 与 GlassHeader.tsx 中的 content.height �
 export default function DashboardPage() {
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
+  const router = useRouter();
 
   // 使用聚合后的 useDashboard Hook
   const {
@@ -99,24 +102,7 @@ export default function DashboardPage() {
   };
 
   const handleMemberLongPress = (member: Member) => {
-    if (Platform.OS === 'web') {
-      const isEdit = window.confirm(`${t.edit} ${member.name}?`);
-      if (isEdit) {
-        setEditingMember(member);
-        setIsAddMemberVisible(true);
-      } else {
-        if (window.confirm(t.confirmDeleteMemberMsg.replace('{member}', member.name))) {
-          handleDeleteMember(member.id);
-        }
-      }
-      return;
-    }
-
-    Alert.alert(member.name, '', [
-      { text: t.cancel, style: 'cancel' },
-      { text: t.edit, onPress: () => { setEditingMember(member); setIsAddMemberVisible(true); } },
-      { text: t.delete, style: 'destructive', onPress: () => handleDeleteMember(member.id) }
-    ]);
+    router.push('/members');
   };
 
   if (isLoading) {
@@ -137,7 +123,11 @@ export default function DashboardPage() {
       />
 
       <GlassHeader>
-        <AppHeader themeColor={themeColor} />
+        <AppHeader 
+          themeColor={themeColor} 
+          onMenuPress={() => router.push('/members')}
+          onNotificationPress={() => router.push('/logs')}
+        />
       </GlassHeader>
 
       <ScrollView
@@ -154,7 +144,7 @@ export default function DashboardPage() {
           members={members}
           currentId={currentMemberId}
           onSelect={setCurrentMemberId}
-          onAddPress={() => setIsAddMemberVisible(true)}
+          onAddPress={() => setIsAddClassVisible(true)} // Image mockup shows '+' to add course
           onLongPress={handleMemberLongPress}
         />
 
@@ -171,11 +161,13 @@ export default function DashboardPage() {
           }}
         />
 
-        <LogList 
-          logs={logs} 
-          classes={allClasses}
-          members={members}
-        />
+        <TouchableOpacity onPress={() => router.push('/logs')} activeOpacity={0.7}>
+          <LogList 
+            logs={logs} 
+            classes={allClasses}
+            members={members}
+          />
+        </TouchableOpacity>
       </ScrollView>
 
       <AddMemberSheet

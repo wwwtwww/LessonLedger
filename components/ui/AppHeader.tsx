@@ -1,30 +1,36 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { Feather } from '@expo/vector-icons';
 import { COLORS } from '../../utils/colors';
 
 interface AppHeaderProps {
   themeColor?: string;
+  onMenuPress?: () => void;
+  onNotificationPress?: () => void;
+  hasNotification?: boolean;
 }
 
-const AppHeader: React.FC<AppHeaderProps> = ({ themeColor }) => {
-  const { t, toggleLang } = useLanguage();
-
+const AppHeader: React.FC<AppHeaderProps> = ({ 
+  themeColor,
+  onMenuPress,
+  onNotificationPress,
+  hasNotification = true
+}) => {
   return (
     <View style={styles.topBar}>
-      {/* 左侧：极简标题，单行排版 */}
-      <View style={styles.titleGroup}>
-        <Text style={[styles.appTitle, themeColor ? { color: themeColor } : null]}>
-          {t.title}
-        </Text>
-      </View>
+      <TouchableOpacity onPress={onMenuPress} style={styles.iconBtn}>
+        <Feather name="menu" size={24} color={COLORS.textPrimary} />
+      </TouchableOpacity>
 
-      {/* 右侧：语言切换按钮 (纯线性极简风格) */}
-      <TouchableOpacity
-        style={[styles.langBtn, themeColor ? { borderColor: themeColor } : null]}     
-        onPress={toggleLang}
-      >
-        <Text style={styles.langBtnText}>🌐 {t.switchLang}</Text>
+      <Text style={[styles.appTitle, themeColor ? { color: themeColor } : null]}>
+        LessonLedger
+      </Text>
+
+      <TouchableOpacity onPress={onNotificationPress} style={styles.iconBtn}>
+        <View>
+          <Feather name="bell" size={24} color={COLORS.textPrimary} />
+          {hasNotification && <View style={styles.redDot} />}
+        </View>
       </TouchableOpacity>
     </View>
   );
@@ -37,27 +43,27 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  titleGroup: {
-    flexDirection: 'row',
+  iconBtn: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   appTitle: {
     fontSize: 18,
-    fontWeight: '500',
+    fontWeight: '600',
     color: COLORS.textPrimary,
-    letterSpacing: -0.2,
   },
-  langBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  langBtnText: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: COLORS.textSecondary,
+  redDot: {
+    position: 'absolute',
+    top: 0,
+    right: 2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#EF4444',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
   },
 });
 

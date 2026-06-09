@@ -16,7 +16,7 @@ interface LogListProps {
 }
 
 const LogList: React.FC<LogListProps> = ({ logs, classes, members }) => {
-  const { t } = useLanguage();
+  const { lang } = useLanguage();
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -34,14 +34,15 @@ const LogList: React.FC<LogListProps> = ({ logs, classes, members }) => {
     // Fallback parsing if classId lookup fails
     let avatar = member?.icon || '📝';
     let courseName = classItem?.name;
+    let memberName = member?.name;
 
     if (!courseName) {
-      // Try to parse from text: [Member] Course -> ...
       const match = log.text.match(/\[(.*?)\] (.*?) ->/);
       if (match) {
+        memberName = match[1];
         courseName = match[2];
         if (!member) {
-           const foundMember = members.find(m => m.name === match[1]);
+           const foundMember = members.find(m => m.name === memberName);
            if (foundMember) avatar = foundMember.icon;
         }
       } else {
@@ -56,23 +57,28 @@ const LogList: React.FC<LogListProps> = ({ logs, classes, members }) => {
         </View>
         <View style={styles.contentContainer}>
           <Text style={styles.courseName} numberOfLines={1}>{courseName}</Text>
-          <Text style={styles.timestamp}>{log.time}</Text>
+          <Text style={styles.subText}>{memberName || 'Member'} · {log.time}</Text>
         </View>
-        <View style={styles.divider} />
+        <View style={styles.rightContainer}>
+          <Text style={styles.changeText}>-1 {lang === 'zh-CN' ? '课时' : 'Session'}</Text>
+          {classItem && (
+             <Text style={styles.subText}>{lang === 'zh-CN' ? `剩余 ${classItem.totalLessons - classItem.doneLessons}` : `Remaining ${classItem.totalLessons - classItem.doneLessons}`}</Text>
+          )}
+        </View>
       </View>
     );
   };
 
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      <Text style={styles.sectionTitle}>{t.recentLogs}</Text>
+      <Text style={styles.sectionTitle}>{lang === 'zh-CN' ? '近期打卡' : 'Recent Logs'}</Text>
       <View style={styles.listWrapper}>
         {logs.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyLogText}>{t.noLog}</Text>
+            <Text style={styles.emptyLogText}>{lang === 'zh-CN' ? '暂无打卡记录' : 'No recent logs'}</Text>
           </View>
         ) : (
-          logs.map((log, index) => renderLogItem(log, index))
+          logs.slice(0, 5).map((log, index) => renderLogItem(log, index))
         )}
       </View>
     </Animated.View>
@@ -81,30 +87,29 @@ const LogList: React.FC<LogListProps> = ({ logs, classes, members }) => {
 
 const styles = StyleSheet.create({
   container: {
-    // marginBottom removed to rely on parent's gap
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600', // SemiBold
+    fontSize: 16,
+    fontWeight: '600',
     color: COLORS.textPrimary,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   listWrapper: {
+    gap: 16,
   },
   logItem: {
-    height: 72,
     flexDirection: 'row',
     alignItems: 'center',
-    position: 'relative',
+    backgroundColor: 'transparent',
   },
   avatarContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F5F5F7',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 12,
   },
   avatarText: {
     fontSize: 20,
@@ -114,36 +119,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   courseName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: COLORS.textPrimary,
-    marginBottom: 2,
+    marginBottom: 4,
   },
-  timestamp: {
+  subText: {
     fontSize: 13,
-    fontWeight: '400', // Regular
     color: COLORS.textSecondary,
   },
-  divider: {
-    position: 'absolute',
-    bottom: 0,
-    left: 56, // Start after avatar (40 width + 16 margin)
-    right: 0,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: COLORS.border,
+  rightContainer: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  changeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+    marginBottom: 4,
   },
   emptyContainer: {
     padding: 24,
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
-    borderRadius: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: COLORS.border,
-    borderStyle: 'dashed',
   },
   emptyLogText: {
     color: COLORS.textSecondary,
-    textAlign: 'center',
     fontSize: 14
   },
 });
