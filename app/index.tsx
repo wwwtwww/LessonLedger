@@ -193,11 +193,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   contentContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingBottom: 50,
-    maxWidth: 600,
+    maxWidth: 430,
     width: '100%',
     alignSelf: 'center',
+    gap: 24,
   },
   center: {
     justifyContent: 'center',
