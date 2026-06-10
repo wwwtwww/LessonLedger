@@ -3,6 +3,7 @@ import { Alert, Platform } from 'react-native';
 import { Member } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../utils/supabase';
+import { storage } from '../utils/storage';
 
 export function useMembers() {
   const { lang } = useLanguage();
@@ -12,22 +13,39 @@ export function useMembers() {
 
   const fetchMembers = useCallback(async () => {
     setIsLoading(true);
+
+    // Step A: 同步读缓存
+    const cached = await storage.getMembers<Member[] | null>();
+    if (cached && cached.length > 0) {
+      setAllMembers(cached);
+      setIsLoading(false);
+    }
+
+    // Step B: 后台拉取 Supabase
     const { data, error } = await supabase
       .from('members')
       .select('*')
-      .is('isDeleted', false) // 只拉取未删除的
+      .is('isDeleted', false)
       .order('id', { ascending: true });
-    
+
     if (error) {
       console.error('Error fetching members:', error.message);
+      if (!cached) setIsLoading(false);
+      return data;
     }
 
     if (data) {
       setAllMembers(data);
+      await storage.setMembers(data);
     }
+
     setIsLoading(false);
     return data;
   }, []);
+
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
 
   const handleAddMember = useCallback(async (name: string, icon: string, themeColor: string) => {
     const newMember = { name, icon, themeColor, isDeleted: false };
