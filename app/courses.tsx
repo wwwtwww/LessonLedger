@@ -7,11 +7,15 @@ import { useLanguage } from '../contexts/LanguageContext';
 import AppHeader from '../components/ui/AppHeader';
 import SwipeableItem from '../components/ui/SwipeableItem';
 import { formatSchedule } from '../utils/formatters';
+import AddClassSheet from '../components/sheets/AddClassSheet';
+import { ClassItem, ScheduleEntry } from '../types';
 
 export default function CoursesScreen() {
   const { t, lang } = useLanguage();
-  const { allClasses, members, handleDeleteClass } = useDashboard();
+  const { allClasses, members, handleDeleteClass, handleAddClass, handleUpdateClass } = useDashboard();
   const [activeTab, setActiveTab] = useState('all');
+  const [isAddClassVisible, setIsAddClassVisible] = useState(false);
+  const [editingClass, setEditingClass] = useState<ClassItem | null>(null);
 
   const tabs = [
     { key: 'all', label: t.all },
@@ -28,12 +32,22 @@ export default function CoursesScreen() {
     return true;
   });
 
+  const onSaveClass = async (data: { id?: string; name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: ScheduleEntry[]; unitType: 'lesson' | 'session' }) => {
+    if (data.id) {
+      await handleUpdateClass(data.id, data);
+    } else {
+      await handleAddClass(data);
+    }
+    setIsAddClassVisible(false);
+    setEditingClass(null);
+  };
+
   const headerRight = (
     <View style={styles.headerRight}>
       <TouchableOpacity style={styles.iconBtn}>
         <Feather name="search" size={20} color={COLORS.textPrimary} />
       </TouchableOpacity>
-      <TouchableOpacity style={styles.iconBtn}>
+      <TouchableOpacity style={styles.iconBtn} onPress={() => setIsAddClassVisible(true)}>
         <Feather name="plus" size={24} color={COLORS.textPrimary} />
       </TouchableOpacity>
     </View>
@@ -44,7 +58,7 @@ export default function CoursesScreen() {
       <StatusBar barStyle="dark-content" />
       
       <View style={styles.headerWrapper}>
-         <AppHeader title={t.courses} rightComponent={headerRight} showBack />
+         <AppHeader title={t.courses} rightComponent={headerRight} />
       </View>
 
       <View style={styles.tabsContainer}>
@@ -121,6 +135,14 @@ export default function CoursesScreen() {
           );
         })}
       </ScrollView>
+
+      <AddClassSheet
+        visible={isAddClassVisible}
+        onClose={() => { setIsAddClassVisible(false); setEditingClass(null); }}
+        onAdd={onSaveClass}
+        members={members}
+        initialData={editingClass}
+      />
     </SafeAreaView>
   );
 }
@@ -135,7 +157,7 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 15, color: COLORS.textSecondary, fontWeight: '500' },
   activeTabText: { color: COLORS.textPrimary, fontWeight: '600' },
   activeTabIndicator: { position: 'absolute', bottom: -1, left: 0, right: 0, height: 3, backgroundColor: '#0F172A', borderRadius: 2 },
-  listContainer: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 40, gap: 16 },
+  listContainer: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 40, gap: 16, maxWidth: 430, width: '100%', alignSelf: 'center' },
   card: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderRadius: 20, padding: 16 },
   cardLeft: { marginRight: 12 },
   iconContainer: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center' },

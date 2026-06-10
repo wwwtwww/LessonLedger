@@ -1,18 +1,16 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Alert, Platform } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { ClassItem, Member } from '../../types';
 import { formatSchedule } from '../../utils/formatters';
-import { triggerHaptic } from '../../utils/haptics';
 import { COLORS } from '../../utils/colors';
 
 interface ClassCardProps {
   classItem: ClassItem;
   owner?: Member;
-  onCheckIn: (classId: string, className: string, memberName: string) => void;
 }
 
-const ClassCard: React.FC<ClassCardProps> = ({ classItem, owner, onCheckIn }) => {
+const ClassCard: React.FC<ClassCardProps> = ({ classItem, owner }) => {
   const { t, lang } = useLanguage();
   const ownerName = owner?.name || '未知';
   const ownerIcon = owner?.icon || '👤';
@@ -23,16 +21,6 @@ const ClassCard: React.FC<ClassCardProps> = ({ classItem, owner, onCheckIn }) =>
     ? Math.min(classItem.doneLessons / classItem.totalLessons, 1)
     : 0;
 
-  const handleCheckInPress = () => {
-    triggerHaptic('cardPress');
-    if (isCompleted) {
-      const errorMsg = t.noRemainingError;
-      if (Platform.OS === 'web') alert(errorMsg);
-      else Alert.alert('', errorMsg);
-      return;
-    }
-    onCheckIn(classItem.id, classItem.name, ownerName);
-  };
   const unitText = classItem.unitType === 'lesson' ? t.unitLesson : t.unitSession;
   const costPerUnit = classItem.totalLessons > 0 
     ? (classItem.totalPrice / classItem.totalLessons).toFixed(1) 
@@ -68,24 +56,14 @@ const ClassCard: React.FC<ClassCardProps> = ({ classItem, owner, onCheckIn }) =>
           </Text>
         </View>
         <View style={styles.progressBarBg}>
-          <View 
+          <View
             style={[
-              styles.progressBarFill, 
+              styles.progressBarFill,
               { width: `${progress * 100}%`, backgroundColor: isCompleted ? '#10B981' : themeColor }
-            ]} 
+            ]}
           />
         </View>
       </View>
-
-      <TouchableOpacity 
-        style={[styles.checkInBtn, isCompleted && styles.checkInBtnDisabled]} 
-        onPress={handleCheckInPress}
-        disabled={isCompleted}
-      >
-        <Text style={styles.checkInBtnText}>
-          {isCompleted ? t.btnCompleted : t.btnCheckIn}
-        </Text>
-      </TouchableOpacity>
     </View>
   );
 };
@@ -107,9 +85,6 @@ const styles = StyleSheet.create({
   highlight: { color: '#0F172A', fontWeight: 'bold' },
   progressBarBg: { height: 6, backgroundColor: '#F1F5F9', borderRadius: 3, overflow: 'hidden' },
   progressBarFill: { height: '100%', borderRadius: 3 },
-  checkInBtn: { backgroundColor: '#3B82F6', paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
-  checkInBtnDisabled: { backgroundColor: '#10B981' },
-  checkInBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: 'bold' },
 });
 
 export default ClassCard;

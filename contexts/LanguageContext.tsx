@@ -85,7 +85,18 @@ const i18n = {
     defaultMember: '默认成员',
     totalExpense: '总支出',
     consumedClasses: '总消耗课时',
-    remainingClasses: '剩余课时'
+    remainingClasses: '剩余课时',
+    tabHome: '首页',
+    tabCourses: '课程',
+    tabProfile: '资料',
+    todayClasses: '今日课程',
+    upcomingClasses: '近期课程',
+    noClassToday: '今天没有排课',
+    checkedIn: '已打卡',
+    viewAllCourses: '查看全部课程',
+    addFirstClass: '添加第一门课程',
+    viewAllLogs: '查看全部打卡日志',
+    addFirstMember: '添加第一个家庭成员'
   },
   'en-US': {
     title: '🎒 LessonLedger',
@@ -170,7 +181,18 @@ const i18n = {
     defaultMember: 'Default',
     totalExpense: 'Total Expense',
     consumedClasses: 'Consumed',
-    remainingClasses: 'Remaining'
+    remainingClasses: 'Remaining',
+    tabHome: 'Home',
+    tabCourses: 'Courses',
+    tabProfile: 'Profile',
+    todayClasses: "Today's Classes",
+    upcomingClasses: 'Upcoming Classes',
+    noClassToday: 'No classes today',
+    checkedIn: 'Checked In',
+    viewAllCourses: 'View All Courses',
+    addFirstClass: 'Add Your First Class',
+    viewAllLogs: 'View All Logs',
+    addFirstMember: 'Add First Member'
   }
 };
 

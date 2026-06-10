@@ -1,8 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useNavigation, useRouter } from 'expo-router';
-import { DrawerActions } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import { COLORS } from '../../utils/colors';
 import { triggerHaptic } from '../../utils/haptics';
 
@@ -23,24 +22,22 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   rightComponent,
   showBack = false,
 }) => {
-  const navigation = useNavigation();
   const router = useRouter();
-
-  const handleMenuPress = () => {
-    triggerHaptic('light');
-    navigation.dispatch(DrawerActions.toggleDrawer());
-  };
 
   const handleBackPress = () => {
     triggerHaptic('light');
-    router.push('/');
+    router.back();
   };
 
   return (
     <View style={styles.topBar}>
-      <TouchableOpacity onPress={showBack ? handleBackPress : handleMenuPress} style={styles.iconBtn}>
-        <Feather name={showBack ? "chevron-left" : "menu"} size={24} color={COLORS.textPrimary} />
-      </TouchableOpacity>
+      <View style={styles.iconBtn}>
+        {showBack && (
+          <TouchableOpacity onPress={handleBackPress}>
+            <Feather name="chevron-left" size={24} color={COLORS.textPrimary} />
+          </TouchableOpacity>
+        )}
+      </View>
 
       <Text style={[styles.appTitle, themeColor ? { color: themeColor } : null]} numberOfLines={1}>
         {title}

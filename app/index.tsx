@@ -7,45 +7,31 @@ import {
   ScrollView,
   ActivityIndicator,
   StatusBar,
-  TouchableOpacity
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 
-// UI Components
 import GlassHeader from '../components/ui/GlassHeader';
 import AppHeader from '../components/ui/AppHeader';
 import FitnessSummaryCards from '../components/dashboard/FitnessSummaryCards';
-import MemberSwitcher from '../components/dashboard/MemberSwitcher';
-import WarningSection from '../components/dashboard/WarningSection';
-import LogList from '../components/logs/LogList';
+import TodayClasses from '../components/dashboard/TodayClasses';
 
-// Sheets (Modals)
 import AddMemberSheet from '../components/sheets/AddMemberSheet';
 import AddClassSheet from '../components/sheets/AddClassSheet';
 
-// Hooks & Utils
 import { useLanguage } from '../contexts/LanguageContext';
 import { useDashboard } from '../hooks/useDashboard';
 import { Member, ClassItem, ScheduleEntry } from '../types';
 import { requestPermissionsAsync } from '../utils/notifications';
 import { COLORS, SPACING } from '../utils/colors';
 
-// Constants
-const HEADER_CONTENT_HEIGHT = 72; // 与 GlassHeader.tsx 中的 content.height 保持一致
+const HEADER_CONTENT_HEIGHT = 72;
 
 export default function DashboardPage() {
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
-  const router = useRouter();
 
-  // 使用聚合后的 useDashboard Hook
   const {
     members,
-    currentMemberId,
-    setCurrentMemberId,
-    filteredClasses,
-    logs,
     stats,
     isLoading,
     themeColor,
@@ -54,7 +40,8 @@ export default function DashboardPage() {
     handleAddClass,
     handleUpdateClass,
     handleCheckIn,
-    allClasses
+    allClasses,
+    logs,
   } = useDashboard();
 
   const [isAddMemberVisible, setIsAddMemberVisible] = useState(false);
@@ -63,7 +50,6 @@ export default function DashboardPage() {
   const [editingClass, setEditingClass] = useState<ClassItem | null>(null);
   const [appIsReady, setAppIsReady] = useState(false);
 
-  // 初始化加载
   useEffect(() => {
     async function prepare() {
       try {
@@ -77,7 +63,6 @@ export default function DashboardPage() {
     prepare();
   }, []);
 
-  // 计算内容滚动的顶部偏移
   const headerOffset = insets.top + HEADER_CONTENT_HEIGHT + 24;
 
   const onSaveMember = (data: { id?: string; name: string; icon: string; themeColor: string }) => {
@@ -90,7 +75,11 @@ export default function DashboardPage() {
     setEditingMember(null);
   };
 
-  const onSaveClass = async (data: { id?: string; name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: ScheduleEntry[]; unitType: 'lesson' | 'session' }) => {
+  const onSaveClass = async (data: {
+    id?: string; name: string; memberId: string;
+    totalPrice: number; totalLessons: number;
+    schedule: ScheduleEntry[]; unitType: 'lesson' | 'session';
+  }) => {
     if (data.id) {
       await handleUpdateClass(data.id, data);
     } else {
@@ -100,11 +89,9 @@ export default function DashboardPage() {
     setEditingClass(null);
   };
 
-  const handleMemberLongPress = (member: Member) => {
-    router.push('/members');
-  };
+  const today = new Date();
+  const dateStr = `${today.getMonth() + 1}月${today.getDate()}日 周${['日','一','二','三','四','五','六'][today.getDay()]}`;
 
-  // 首次加载：缓存为空且正在加载时显示骨架屏
   if (!appIsReady || (isLoading && members.length === 0)) {
     return (
       <View style={[styles.container, styles.center]}>
@@ -116,59 +103,30 @@ export default function DashboardPage() {
 
   return (
     <View style={styles.container}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="transparent"
-        translucent
-      />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
       <GlassHeader>
-        <AppHeader 
-          title={t.dashboard}
-          themeColor={themeColor} 
-          onNotificationPress={() => router.push('/logs')}
-          hasNotification={true}
-        />
+        <AppHeader title={t.tabHome} themeColor={themeColor} />
       </GlassHeader>
 
       <ScrollView
         style={styles.container}
         contentContainerStyle={[
           styles.contentContainer,
-          { paddingTop: headerOffset }
+          { paddingTop: headerOffset },
         ]}
         showsVerticalScrollIndicator={false}
       >
+        <Text style={styles.dateTitle}>{dateStr}</Text>
+
         <FitnessSummaryCards stats={stats} themeColor={themeColor} />
 
-        <MemberSwitcher
+        <TodayClasses
+          allClasses={allClasses}
           members={members}
-          currentId={currentMemberId}
-          onSelect={setCurrentMemberId}
-          onAddPress={() => setIsAddClassVisible(true)}
-          onLongPress={handleMemberLongPress}
+          logs={logs}
+          onCheckIn={handleCheckIn}
         />
-
-        <WarningSection 
-          classes={filteredClasses} 
-          members={members}
-          themeColor={themeColor} 
-          onCheckIn={(classId) => {
-            const cls = filteredClasses.find(c => c.id === classId);
-            if (cls) {
-              const m = members.find(mem => mem.id === cls.memberId);
-              handleCheckIn(classId, cls.name, m?.name || '未知');
-            }
-          }}
-        />
-
-        <TouchableOpacity onPress={() => router.push('/logs')} activeOpacity={0.7}>
-          <LogList 
-            logs={logs} 
-            classes={allClasses}
-            members={members}
-          />
-        </TouchableOpacity>
       </ScrollView>
 
       <AddMemberSheet
@@ -195,15 +153,21 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: SPACING.LG,
-    paddingBottom: SPACING.XL + SPACING.MD, // 48px
+    paddingBottom: SPACING.XL + 16,
     maxWidth: 430,
     width: '100%',
     alignSelf: 'center',
     gap: SPACING.LG,
   },
+  dateTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: -8,
+  },
   center: {
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
   },
   loadingText: {
     marginTop: 10,

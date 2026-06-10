@@ -1,9 +1,8 @@
-import { Drawer } from 'expo-router/drawer';
-import { GestureHandlerRootView } from "react-native-gesture-handler"; 
-import { SafeAreaProvider } from 'react-native-safe-area-context';     
-import { LanguageProvider, useLanguage } from "../contexts/LanguageContext";        
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';       
-import CustomDrawerContent from '../components/ui/CustomDrawerContent';
+import { Tabs } from 'expo-router';
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { LanguageProvider, useLanguage } from "../contexts/LanguageContext";
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { Feather } from '@expo/vector-icons';
 import { COLORS } from '../utils/colors';
 import { useEffect } from 'react';
@@ -17,7 +16,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <LanguageProvider>
           <BottomSheetModalProvider>
-            <DrawerWrapper />
+            <TabsWrapper />
           </BottomSheetModalProvider>
         </LanguageProvider>
       </SafeAreaProvider>
@@ -25,10 +24,9 @@ export default function RootLayout() {
   );
 }
 
-function DrawerWrapper() {
+function TabsWrapper() {
   const { t } = useLanguage();
 
-  // 队列执行器：将离线操作同步回 Supabase
   const executeSyncOp = async (op: SyncOperation): Promise<boolean> => {
     try {
       if (op.type === 'insert') {
@@ -49,61 +47,63 @@ function DrawerWrapper() {
     }
   };
 
-  // 初始化网络监听，联网时自动回放队列
   const { onNetworkChange } = useNetwork();
 
   useEffect(() => {
     initNetworkListener();
-
     const unsub = onNetworkChange((isConnected) => {
       if (isConnected) {
         syncQueue.flush(executeSyncOp);
       }
     });
-
     return unsub;
   }, []);
 
   return (
-    <Drawer
-      drawerContent={(props) => <CustomDrawerContent {...props} />}
+    <Tabs
       screenOptions={{
-        drawerType: 'front' as const,
         headerShown: false,
-        drawerActiveBackgroundColor: 'rgba(99,102,241,0.08)',
-        drawerActiveTintColor: COLORS.primary,
-        drawerInactiveTintColor: COLORS.textSecondary,
-        drawerStyle: { backgroundColor: COLORS.background, width: 280 }
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: COLORS.textSecondary,
+        tabBarStyle: {
+          backgroundColor: COLORS.background,
+          borderTopColor: '#E2E8F0',
+        },
       }}
     >
-      <Drawer.Screen
+      <Tabs.Screen
         name="index"
-        options={{ 
-          drawerLabel: t.dashboard, 
-          drawerIcon: ({color}) => <Feather name="home" size={24} color={color}/> 
+        options={{
+          tabBarLabel: t.tabHome,
+          tabBarIcon: ({ color }) => <Feather name="home" size={22} color={color} />,
         }}
       />
-      <Drawer.Screen
+      <Tabs.Screen
         name="courses"
-        options={{ 
-          drawerLabel: t.courses, 
-          drawerIcon: ({color}) => <Feather name="book" size={24} color={color}/> 
+        options={{
+          tabBarLabel: t.tabCourses,
+          tabBarIcon: ({ color }) => <Feather name="book" size={22} color={color} />,
         }}
       />
-      <Drawer.Screen
-        name="members"
-        options={{ 
-          drawerLabel: t.members, 
-          drawerIcon: ({color}) => <Feather name="users" size={24} color={color}/> 
+      <Tabs.Screen
+        name="profile"
+        options={{
+          tabBarLabel: t.tabProfile,
+          tabBarIcon: ({ color }) => <Feather name="user" size={22} color={color} />,
         }}
       />
-      <Drawer.Screen
+      <Tabs.Screen
         name="logs"
-        options={{ 
-          drawerLabel: t.logs, 
-          drawerIcon: ({color}) => <Feather name="list" size={24} color={color}/> 
+        options={{
+          href: null,
         }}
       />
-    </Drawer>
+      <Tabs.Screen
+        name="members"
+        options={{
+          href: null,
+        }}
+      />
+    </Tabs>
   );
 }

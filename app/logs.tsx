@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
   iconBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
   filterBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, gap: 4, marginRight: 8 },       
   filterText: { fontSize: 14, color: COLORS.textSecondary, fontWeight: '500' },
-  listContainer: { padding: 16 },
+  listContainer: { padding: 16, maxWidth: 430, width: '100%', alignSelf: 'center' },
   group: { marginBottom: 24 },
   groupTitle: { fontSize: 13, color: '#94A3B8', fontWeight: '500', marginBottom: 12, marginLeft: 8 },
   logItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', padding: 16, borderRadius: 20, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0,
