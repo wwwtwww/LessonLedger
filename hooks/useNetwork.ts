@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 
 type NetworkCallback = (isConnected: boolean) => void;
@@ -29,13 +29,13 @@ export function useNetwork() {
     initNetworkListener();
   }, []);
 
-  const onNetworkChange = (callback: NetworkCallback) => {
+  const onNetworkChange = useCallback((callback: NetworkCallback) => {
     callbackRef.current = callback;
     listeners.push(callback);
     return () => {
       listeners = listeners.filter(fn => fn !== callback);
     };
-  };
+  }, []);
 
   return { onNetworkChange, isConnected: currentState };
 }

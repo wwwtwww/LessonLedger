@@ -83,9 +83,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
   rightContainer: {
-    width: 40,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
   },
   redDot: {
     position: 'absolute',

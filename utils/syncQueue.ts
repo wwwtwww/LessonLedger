@@ -1,4 +1,5 @@
 import { storage } from './storage';
+import { log } from './logger';
 
 export type SyncOperation = {
   id: string;
@@ -46,7 +47,11 @@ export const syncQueue = {
 
     const queue = await this.getAll();
     for (const op of [...queue].sort((a, b) => a.createdAt - b.createdAt)) {
-      if (op.retries >= 3) continue;
+      if (op.retries >= 3) {
+        log.error('syncQueue', `Discarded failed offline operation ${op.id} after 3 attempts`, op);
+        await this.remove(op.id);
+        continue;
+      }
       const ok = await executor(op);
       if (ok) {
         await this.remove(op.id);

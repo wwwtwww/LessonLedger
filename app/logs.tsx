@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, StatusBar, Modal, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Modal, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { COLORS } from '../utils/colors';
 import { useDashboard } from '../hooks/useDashboard';
@@ -61,40 +62,42 @@ export default function LogsScreen() {
               <View style={styles.iconBtn} />
             </View>
 
-            <View style={styles.successIconContainer}>
-              <View style={styles.successIcon}>
-                <Feather name="check" size={48} color="#FFFFFF" />
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+              <View style={styles.successIconContainer}>
+                <View style={styles.successIcon}>
+                  <Feather name="check" size={48} color="#FFFFFF" />
+                </View>
+                <Text style={styles.successText}>{t.checkInSuccess}</Text>
               </View>
-              <Text style={styles.successText}>{t.checkInSuccess}</Text>
-            </View>
 
-            <View style={styles.detailList}>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>{t.courseLabel}</Text>
-                <Text style={styles.detailValue}>{courseName}</Text>
+              <View style={styles.detailList}>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>{t.courseLabel}</Text>
+                  <Text style={styles.detailValue}>{courseName}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>{t.memberLabel}</Text>
+                  <Text style={styles.detailValue}>{memberName}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>{t.changeLabel}</Text>
+                  <Text style={styles.detailValue}>-1 {unitText}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>{t.timeLabel}</Text>
+                  <Text style={styles.detailValue}>{selectedLog.time}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>{t.noteLabel}</Text>
+                  <Text style={styles.detailValue}>{t.classPractice}</Text>
+                </View>
               </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>{t.memberLabel}</Text>
-                <Text style={styles.detailValue}>{memberName}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>{t.changeLabel}</Text>
-                <Text style={styles.detailValue}>-1 {unitText}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>{t.timeLabel}</Text>
-                <Text style={styles.detailValue}>{selectedLog.time}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>{t.noteLabel}</Text>
-                <Text style={styles.detailValue}>{t.classPractice}</Text>
-              </View>
-            </View>
 
-            <View style={styles.hapticFeedback}>
-               <Feather name="activity" size={16} color="#94A3B8" />
-               <Text style={styles.hapticText}>{t.hapticFeedback}</Text>
-            </View>
+              <View style={styles.hapticFeedback}>
+                 <Feather name="activity" size={16} color="#94A3B8" />
+                 <Text style={styles.hapticText}>{t.hapticFeedback}</Text>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -109,7 +112,7 @@ export default function LogsScreen() {
          <AppHeader title={t.logs} rightComponent={headerRight} showBack />
       </View>
 
-      <ScrollView contentContainerStyle={styles.listContainer}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.listContainer}>
         {Object.entries(groupedLogs).map(([groupName, groupLogs]) => (
           <View key={groupName} style={styles.group}>
             <Text style={styles.groupTitle}>{groupName}</Text>
@@ -162,11 +165,13 @@ export default function LogsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  headerWrapper: { height: 56, paddingHorizontal: 4 },
+
+  scrollView: { flex: 1, width: '100%' },
+  headerWrapper: { height: 64, paddingHorizontal: 4 },
   iconBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
   filterBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, gap: 4, marginRight: 8 },       
   filterText: { fontSize: 14, color: COLORS.textSecondary, fontWeight: '500' },
-  listContainer: { padding: 16, maxWidth: 430, width: '100%', alignSelf: 'center' },
+  listContainer: { padding: 16, maxWidth: 860, width: '100%', alignSelf: 'center', flexGrow: 1, justifyContent: 'flex-start' },
   group: { marginBottom: 24 },
   groupTitle: { fontSize: 13, color: '#94A3B8', fontWeight: '500', marginBottom: 12, marginLeft: 8 },
   logItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', padding: 16, borderRadius: 20, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0,

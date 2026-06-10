@@ -71,7 +71,6 @@ const LogList: React.FC<LogListProps> = ({ logs, classes, members }) => {
 
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      <Text style={styles.sectionTitle}>{lang === 'zh-CN' ? '近期打卡' : 'Recent Logs'}</Text>
       <View style={styles.listWrapper}>
         {logs.length === 0 ? (
           <View style={styles.emptyContainer}>
@@ -87,12 +86,6 @@ const LogList: React.FC<LogListProps> = ({ logs, classes, members }) => {
 
 const styles = StyleSheet.create({
   container: {
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-    marginBottom: 12,
   },
   listWrapper: {
     gap: 16,

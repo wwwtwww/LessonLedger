@@ -33,6 +33,7 @@ export default function AddClassSheet({ visible, onClose, onAdd, members, initia
   const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
   const [unitType, setUnitType] = useState<'lesson' | 'session'>('lesson');
   const [error, setError] = useState('');
+  const [showMemberPicker, setShowMemberPicker] = useState(false);
   const prevVisible = useRef(visible);
 
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
@@ -95,6 +96,11 @@ export default function AddClassSheet({ visible, onClose, onAdd, members, initia
   };
 
   const handleSaveSchedule = () => {
+    if (schedule.length === 0) {
+      setError(lang === 'zh-CN' ? '请添加至少一个上课时间' : 'Please add at least one schedule');
+      return;
+    }
+    setError('');
     setStep(3);
   };
 
@@ -135,12 +141,34 @@ export default function AddClassSheet({ visible, onClose, onAdd, members, initia
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>{lang === 'zh-CN' ? '选择成员' : 'Select Member'}</Text>
-        <View style={styles.memberPicker}>
-          <TouchableOpacity style={styles.selectRow}>
-            <Text style={styles.selectText}>{getMemberName() || (lang === 'zh-CN' ? '请选择' : 'Select')}</Text>
-            <Feather name="chevron-right" size={20} color="#94A3B8" />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={styles.selectRow}
+          onPress={() => setShowMemberPicker(v => !v)}
+        >
+          <Text style={styles.selectText}>
+            {getMemberName()
+              ? `${members.find(m => m.id === memberId)?.icon || ''} ${getMemberName()}`
+              : (lang === 'zh-CN' ? '请选择成员' : 'Select a member')}
+          </Text>
+          <Feather name={showMemberPicker ? 'chevron-up' : 'chevron-down'} size={20} color="#94A3B8" />
+        </TouchableOpacity>
+        {showMemberPicker && (
+          <View style={styles.memberList}>
+            {members.map(m => (
+              <TouchableOpacity
+                key={m.id}
+                style={[styles.memberOption, memberId === m.id && styles.memberOptionSelected]}
+                onPress={() => { setMemberId(m.id); setShowMemberPicker(false); }}
+              >
+                <Text style={styles.memberOptionIcon}>{m.icon}</Text>
+                <Text style={[styles.memberOptionText, memberId === m.id && styles.memberOptionTextSelected]}>
+                  {m.name}
+                </Text>
+                {memberId === m.id && <Feather name="check" size={16} color={COLORS.primary} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
 
       <View style={styles.inputGroup}>
@@ -204,6 +232,8 @@ export default function AddClassSheet({ visible, onClose, onAdd, members, initia
 
       <SchedulePicker value={schedule} onChange={setSchedule} />
 
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
       <TouchableOpacity style={[styles.primaryBtn, { marginTop: 24 }]} onPress={handleSaveSchedule}>
         <Text style={styles.primaryBtnText}>{lang === 'zh-CN' ? '保存' : 'Save'}</Text>
       </TouchableOpacity>
@@ -221,53 +251,53 @@ export default function AddClassSheet({ visible, onClose, onAdd, members, initia
       </View>
 
       <View style={styles.summaryList}>
-        <View style={styles.summaryRow}>
+        <TouchableOpacity style={styles.summaryRow} onPress={() => setStep(1)}>
           <Text style={styles.summaryLabel}>{lang === 'zh-CN' ? '课程名称' : 'Course Name'}</Text>
           <View style={styles.summaryValueRow}>
             <Text style={styles.summaryValue}>{name}</Text>
             <Feather name="chevron-right" size={20} color="#94A3B8" />
           </View>
-        </View>
+        </TouchableOpacity>
         <View style={styles.divider} />
-        <View style={styles.summaryRow}>
+        <TouchableOpacity style={styles.summaryRow} onPress={() => setStep(1)}>
           <Text style={styles.summaryLabel}>{lang === 'zh-CN' ? '选择成员' : 'Member'}</Text>
           <View style={styles.summaryValueRow}>
             <Text style={styles.summaryValue}>{getMemberName()}</Text>
             <Feather name="chevron-right" size={20} color="#94A3B8" />
           </View>
-        </View>
+        </TouchableOpacity>
         <View style={styles.divider} />
-        <View style={styles.summaryRow}>
+        <TouchableOpacity style={styles.summaryRow} onPress={() => setStep(1)}>
           <Text style={styles.summaryLabel}>{lang === 'zh-CN' ? '单位类型' : 'Unit Type'}</Text>
           <View style={styles.summaryValueRow}>
             <Text style={styles.summaryValue}>{unitType === 'lesson' ? (lang === 'zh-CN' ? '课时' : 'Lesson') : (lang === 'zh-CN' ? '次数' : 'Session')}</Text>
             <Feather name="chevron-right" size={20} color="#94A3B8" />
           </View>
-        </View>
+        </TouchableOpacity>
         <View style={styles.divider} />
-        <View style={styles.summaryRow}>
+        <TouchableOpacity style={styles.summaryRow} onPress={() => setStep(1)}>
           <Text style={styles.summaryLabel}>{lang === 'zh-CN' ? '总课时' : 'Total Lessons'}</Text>
           <View style={styles.summaryValueRow}>
             <Text style={styles.summaryValue}>{totalLessons}</Text>
             <Feather name="chevron-right" size={20} color="#94A3B8" />
           </View>
-        </View>
+        </TouchableOpacity>
         <View style={styles.divider} />
-        <View style={styles.summaryRow}>
+        <TouchableOpacity style={styles.summaryRow} onPress={() => setStep(1)}>
           <Text style={styles.summaryLabel}>{lang === 'zh-CN' ? '总费用' : 'Total Cost'}</Text>
           <View style={styles.summaryValueRow}>
             <Text style={styles.summaryValue}>{totalPrice}</Text>
             <Feather name="chevron-right" size={20} color="#94A3B8" />
           </View>
-        </View>
+        </TouchableOpacity>
         <View style={styles.divider} />
-        <View style={styles.summaryRow}>
+        <TouchableOpacity style={styles.summaryRow} onPress={() => setStep(2)}>
           <View>
             <Text style={styles.summaryLabel}>{lang === 'zh-CN' ? '上课时间' : 'Schedule'}</Text>
             <Text style={styles.summarySub}>{schedule.length} rules set</Text>
           </View>
           <Feather name="chevron-right" size={20} color="#94A3B8" />
-        </View>
+        </TouchableOpacity>
       </View>
 
       <TouchableOpacity style={styles.primaryBtn} onPress={handleAdd}>
@@ -322,9 +352,15 @@ const styles = StyleSheet.create({
   inputGroup: { marginBottom: 20 },
   label: { fontSize: 14, color: '#64748B', marginBottom: 8 },
   input: { borderBottomWidth: 1, borderBottomColor: '#E2E8F0', paddingVertical: 12, fontSize: 16, color: COLORS.textPrimary },
-  selectRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', paddingVertical: 12 },
+  selectRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, backgroundColor: '#FAFAFA' },
   memberPicker: { marginBottom: 8 },
   selectText: { fontSize: 16, color: COLORS.textPrimary },
+  memberList: { marginTop: 8, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, overflow: 'hidden', backgroundColor: '#FFFFFF' },
+  memberOption: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 10, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  memberOptionSelected: { backgroundColor: '#EEF2FF' },
+  memberOptionIcon: { fontSize: 20 },
+  memberOptionText: { flex: 1, fontSize: 15, color: COLORS.textPrimary, fontWeight: '500' },
+  memberOptionTextSelected: { color: COLORS.primary },
   unitTabs: { flexDirection: 'row', backgroundColor: '#F1F5F9', borderRadius: 12, padding: 4 },
   unitTab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8 },
   unitTabActive: { backgroundColor: COLORS.primary },

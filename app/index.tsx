@@ -7,10 +7,11 @@ import {
   ScrollView,
   ActivityIndicator,
   StatusBar,
+  Platform,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import GlassHeader from '../components/ui/GlassHeader';
+import GlassHeader, { GLASS_HEADER_HEIGHT } from '../components/ui/GlassHeader';
 import AppHeader from '../components/ui/AppHeader';
 import FitnessSummaryCards from '../components/dashboard/FitnessSummaryCards';
 import TodayClasses from '../components/dashboard/TodayClasses';
@@ -24,10 +25,9 @@ import { Member, ClassItem, ScheduleEntry } from '../types';
 import { requestPermissionsAsync } from '../utils/notifications';
 import { COLORS, SPACING } from '../utils/colors';
 
-const HEADER_CONTENT_HEIGHT = 72;
+
 
 export default function DashboardPage() {
-  const insets = useSafeAreaInsets();
   const { t } = useLanguage();
 
   const {
@@ -63,7 +63,9 @@ export default function DashboardPage() {
     prepare();
   }, []);
 
-  const headerOffset = insets.top + HEADER_CONTENT_HEIGHT + 24;
+  // Web: GlassHeader is in normal flow, no offset needed
+  // Native: GlassHeader is absolute, need to push content below it
+  const headerOffset = Platform.OS === 'web' ? 0 : GLASS_HEADER_HEIGHT + 16;
 
   const onSaveMember = (data: { id?: string; name: string; icon: string; themeColor: string }) => {
     if (data.id) {
@@ -102,7 +104,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
       <GlassHeader>
@@ -113,7 +115,7 @@ export default function DashboardPage() {
         style={styles.container}
         contentContainerStyle={[
           styles.contentContainer,
-          { paddingTop: headerOffset },
+          headerOffset > 0 ? { paddingTop: headerOffset } : null,
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -142,7 +144,7 @@ export default function DashboardPage() {
         members={members}
         initialData={editingClass}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -154,10 +156,12 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingHorizontal: SPACING.LG,
     paddingBottom: SPACING.XL + 16,
-    maxWidth: 430,
+    maxWidth: 860,
     width: '100%',
     alignSelf: 'center',
     gap: SPACING.LG,
+    flexGrow: 1,
+    justifyContent: 'flex-start',
   },
   dateTitle: {
     fontSize: 14,

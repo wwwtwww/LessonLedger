@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  SafeAreaView, StatusBar, Alert, Platform
+  StatusBar, Alert, Platform
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { COLORS } from '../utils/colors';
@@ -71,7 +72,7 @@ export default function ProfileScreen() {
         <AppHeader title={t.tabProfile} rightComponent={headerRight} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.listContainer}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.listContainer}>
         <Text style={styles.sectionTitle}>👥 {t.members}</Text>
         {members.map(member => (
           <SwipeableItem
@@ -115,8 +116,9 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  headerWrapper: { height: 56, paddingHorizontal: 4 },
-  listContainer: { padding: 16, paddingBottom: 40, maxWidth: 430, width: '100%', alignSelf: 'center' },
+  scrollView: { flex: 1, width: '100%' },
+  headerWrapper: { height: 64, paddingHorizontal: 4 },
+  listContainer: { padding: 16, paddingBottom: 40, maxWidth: 860, width: '100%', alignSelf: 'center', flexGrow: 1, justifyContent: 'flex-start' },
   sectionTitle: {
     fontSize: 14,
     fontWeight: '600',

@@ -5,6 +5,8 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../utils/supabase';
 import { storage } from '../utils/storage';
 import { log } from '../utils/logger';
+import { syncQueue } from '../utils/syncQueue';
+import { generateUUID } from '../utils/uuid';
 
 export function useMembers() {
   const { lang } = useLanguage();
@@ -52,10 +54,10 @@ export function useMembers() {
 
   const handleAddMember = useCallback(async (name: string, icon: string, themeColor: string) => {
     pendingChanges.current++;
-    const tempId = `temp_${Date.now()}`;
-    const newMember: Member = { id: tempId, name, icon, themeColor, isDeleted: false };
+    const memberId = generateUUID();
+    const newMember: Member = { id: memberId, name, icon, themeColor, isDeleted: false };
 
-    // 乐观更新：立即更新 UI + 缓存（使用函数式 setState 保证拿到最新值）
+    // 乐观更新
     setAllMembers(prev => {
       const updated = [...prev, newMember];
       storage.setMembers(updated);
@@ -63,31 +65,18 @@ export function useMembers() {
     });
 
     // 尝试同步到 Supabase
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('members')
-      .insert([{ name, icon, themeColor, isDeleted: false }])
-      .select();
+      .insert([{ id: memberId, name, icon, themeColor, isDeleted: false }]);
 
-    if (error || !data) {
-      pendingChanges.current--;
-      log.error('useMembers', 'Error adding member', { message: error?.message, details: error?.details, hint: error?.hint });
-      if (Platform.OS === 'web') alert(`Failed to add member: ${error?.message}`);
-      else Alert.alert('Error', `Failed to add member: ${error?.message}`);
-      // 回退乐观更新
-      setAllMembers(prev => {
-        const reverted = prev.filter(m => m.id !== tempId);
-        storage.setMembers(reverted);
-        return reverted;
+    if (error) {
+      log.warn('useMembers', 'Failed to add member, queuing sync', { message: error.message });
+      await syncQueue.add({
+        table: 'members',
+        type: 'insert',
+        payload: { id: memberId, name, icon, themeColor, isDeleted: false },
       });
-      return;
     }
-
-    // 用云端 ID 替换临时 ID
-    setAllMembers(prev => {
-      const updated = prev.map(m => m.id === tempId ? { ...m, id: data[0].id } : m);
-      storage.setMembers(updated);
-      return updated;
-    });
     pendingChanges.current--;
   }, []);
 
@@ -110,11 +99,12 @@ export function useMembers() {
       .eq('id', id);
 
     if (error) {
-      pendingChanges.current--;
-      log.error('useMembers', 'Error updating member', { message: error.message, details: error.details, hint: error.hint });
-      if (Platform.OS === 'web') alert(`Failed to update member: ${error.message}`);
-      else Alert.alert('Error', `Failed to update member: ${error.message}`);
-      return;
+      log.warn('useMembers', 'Failed to update member, queuing sync', { message: error.message });
+      await syncQueue.add({
+        table: 'members',
+        type: 'update',
+        payload: { id, ...updateData },
+      });
     }
     pendingChanges.current--;
   }, []);
@@ -139,9 +129,12 @@ export function useMembers() {
       .eq('id', id);
 
     if (error) {
-      pendingChanges.current--;
-      log.error('useMembers', 'Error deleting member', { message: error.message });
-      return;
+      log.warn('useMembers', 'Failed to delete member, queuing sync', { message: error.message });
+      await syncQueue.add({
+        table: 'members',
+        type: 'update',
+        payload: { id, isDeleted: true },
+      });
     }
     pendingChanges.current--;
   }, [currentMemberId]);

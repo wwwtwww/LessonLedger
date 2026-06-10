@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { COLORS } from '../utils/colors';
 import { useDashboard } from '../hooks/useDashboard';
@@ -76,7 +77,7 @@ export default function CoursesScreen() {
         ))}
       </View>
 
-      <ScrollView contentContainerStyle={styles.listContainer}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.listContainer}>
         {filteredClasses.map(item => {
           const member = members.find(m => m.id === item.memberId);
           const remaining = item.totalLessons - item.doneLessons;
@@ -87,7 +88,10 @@ export default function CoursesScreen() {
           return (
             <SwipeableItem 
               key={item.id} 
-              onEdit={() => {}} 
+              onEdit={() => {
+                setEditingClass(item);
+                setIsAddClassVisible(true);
+              }} 
               onDelete={() => handleDeleteClass(item.id)}
             >
               <View style={styles.card}>
@@ -125,7 +129,7 @@ export default function CoursesScreen() {
                     <View 
                       style={[
                         styles.progressBarFill, 
-                        { width: `${progress * 100}%`, backgroundColor: isUrgent ? '#EF4444' : '#F59E0B' }
+                        { width: `${progress * 100}%`, backgroundColor: isUrgent ? COLORS.danger : COLORS.warning }
                       ]} 
                     />
                   </View>
@@ -149,7 +153,8 @@ export default function CoursesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  headerWrapper: { height: 56, paddingHorizontal: 4 },
+  scrollView: { flex: 1, width: '100%' },
+  headerWrapper: { height: 64, paddingHorizontal: 4 },
   headerRight: { flexDirection: 'row', alignItems: 'center' },
   iconBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
   tabsContainer: { flexDirection: 'row', paddingHorizontal: 20, marginTop: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
@@ -157,7 +162,7 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 15, color: COLORS.textSecondary, fontWeight: '500' },
   activeTabText: { color: COLORS.textPrimary, fontWeight: '600' },
   activeTabIndicator: { position: 'absolute', bottom: -1, left: 0, right: 0, height: 3, backgroundColor: '#0F172A', borderRadius: 2 },
-  listContainer: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 40, gap: 16, maxWidth: 430, width: '100%', alignSelf: 'center' },
+  listContainer: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 40, gap: 16, maxWidth: 860, width: '100%', alignSelf: 'center', flexGrow: 1, justifyContent: 'flex-start' },
   card: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderRadius: 20, padding: 16 },
   cardLeft: { marginRight: 12 },
   iconContainer: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center' },
@@ -165,7 +170,7 @@ const styles = StyleSheet.create({
   cardMain: { flex: 1 },
   cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   className: { fontSize: 16, fontWeight: '600', color: COLORS.textPrimary, flex: 1 },
-  remainingText: { fontSize: 13, fontWeight: '600', color: '#F59E0B' },
+  remainingText: { fontSize: 13, fontWeight: '600', color: COLORS.warning },
   memberText: { fontSize: 13, color: COLORS.textSecondary, marginBottom: 12 },
   progressRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   progressText: { fontSize: 13, color: COLORS.textSecondary },

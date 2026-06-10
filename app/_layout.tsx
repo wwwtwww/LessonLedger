@@ -57,7 +57,7 @@ function TabsWrapper() {
       }
     });
     return unsub;
-  }, []);
+  }, [onNetworkChange]);
 
   return (
     <Tabs
@@ -68,6 +68,14 @@ function TabsWrapper() {
         tabBarStyle: {
           backgroundColor: COLORS.background,
           borderTopColor: '#E2E8F0',
+          maxWidth: 860,
+          width: '100%',
+          alignSelf: 'center',
+        },
+        sceneStyle: {
+          flex: 1,
+          justifyContent: 'flex-start',
+          alignItems: 'stretch',
         },
       }}
     >
