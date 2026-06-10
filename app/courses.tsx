@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, StatusBar } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { COLORS } from '../utils/colors';
 import { useDashboard } from '../hooks/useDashboard';
 import { useLanguage } from '../contexts/LanguageContext';
-import SwipeableItem from '../components/ui/SwipeableItem';
 import AppHeader from '../components/ui/AppHeader';
+import SwipeableItem from '../components/ui/SwipeableItem';
 import { formatSchedule } from '../utils/formatters';
 
 export default function CoursesScreen() {
@@ -44,7 +44,7 @@ export default function CoursesScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-
+      
       <View style={styles.headerWrapper}>
         <AppHeader title={t.courses} rightComponent={headerRight} />
       </View>
@@ -70,6 +70,7 @@ export default function CoursesScreen() {
           const remaining = item.totalLessons - item.doneLessons;
           const isUrgent = remaining <= 3 && remaining > 0;
           const progress = item.totalLessons > 0 ? item.doneLessons / item.totalLessons : 0;
+          const unitText = item.unitType === 'session' ? t.unitSession : t.unitLesson;
 
           return (
             <SwipeableItem 
@@ -88,7 +89,7 @@ export default function CoursesScreen() {
                   <View style={styles.cardHeaderRow}>
                     <Text style={styles.className} numberOfLines={1}>{item.name}</Text>
                     <Text style={[styles.remainingText, isUrgent && { color: '#EF4444' }]}>
-                      {lang === 'zh-CN' ? `剩余 ${remaining} ${item.unitType === 'session' ? '次' : '课时'}` : `Remaining ${remaining}`}
+                      {t.remain} {remaining} {unitText}
                       <Feather name="chevron-right" size={14} color="#94A3B8" />
                     </Text>
                   </View>
@@ -99,11 +100,11 @@ export default function CoursesScreen() {
 
                   <View style={styles.progressRow}>
                     <Text style={styles.progressText}>
-                      <Text style={styles.doneText}>{item.doneLessons}</Text> / {item.totalLessons} {item.unitType === 'session' ? '次' : '课时'}
+                      <Text style={styles.doneText}>{item.doneLessons}</Text> / {item.totalLessons} {unitText}
                     </Text>
                     <View style={styles.costContainer}>
                       <Text style={styles.costText}>
-                         {item.totalLessons > 0 ? (item.totalPrice / item.totalLessons).toFixed(1) : '0'} / {item.unitType === 'session' ? '次' : '课时'}
+                         {item.totalLessons > 0 ? (item.totalPrice / item.totalLessons).toFixed(1) : '0'} / {unitText}
                       </Text>
                     </View>
                   </View>
@@ -129,8 +130,8 @@ export default function CoursesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   headerWrapper: { height: 56, paddingHorizontal: 4 },
-  iconBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
   headerRight: { flexDirection: 'row', alignItems: 'center' },
+  iconBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
   tabsContainer: { flexDirection: 'row', paddingHorizontal: 20, marginTop: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
   tab: { marginRight: 24, paddingVertical: 12, position: 'relative' },
   tabText: { fontSize: 15, color: COLORS.textSecondary, fontWeight: '500' },

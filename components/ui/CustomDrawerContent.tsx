@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, StyleSheet, Text } from 'react-native';
-import { DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
+import { DrawerContentScrollView, DrawerItemList, DrawerContentComponentProps } from '@react-navigation/drawer';  
 import { COLORS } from '../../utils/colors';
 
-export default function CustomDrawerContent(props: any) {
+export default function CustomDrawerContent(props: DrawerContentComponentProps) {
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>
       <DrawerContentScrollView {...props} contentContainerStyle={{ paddingTop: 60 }}>

@@ -4,15 +4,12 @@ import {
   Text,
   View,
   ScrollView,
-  Alert,
-  Platform,
   ActivityIndicator,
   StatusBar,
   TouchableOpacity
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { triggerHaptic } from '../utils/haptics';
 
 // UI Components
 import GlassHeader from '../components/ui/GlassHeader';
@@ -128,6 +125,7 @@ export default function DashboardPage() {
           title={t.dashboard}
           themeColor={themeColor} 
           onNotificationPress={() => router.push('/logs')}
+          hasNotification={true}
         />
       </GlassHeader>
 
@@ -145,7 +143,7 @@ export default function DashboardPage() {
           members={members}
           currentId={currentMemberId}
           onSelect={setCurrentMemberId}
-          onAddPress={() => setIsAddClassVisible(true)} // Image mockup shows '+' to add course
+          onAddPress={() => setIsAddClassVisible(true)}
           onLongPress={handleMemberLongPress}
         />
 

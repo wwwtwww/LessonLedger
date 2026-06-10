@@ -1,22 +1,21 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, StatusBar, Alert, Platform } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { COLORS } from '../utils/colors';
 import { useDashboard } from '../hooks/useDashboard';
 import { useLanguage } from '../contexts/LanguageContext';
+import AppHeader from '../components/ui/AppHeader';
 import AddMemberSheet from '../components/sheets/AddMemberSheet';
 import SwipeableItem from '../components/ui/SwipeableItem';
-import AppHeader from '../components/ui/AppHeader';
 import { Member } from '../types';
 
 const THEME_COLORS = ['#6366F1', '#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#D946EF', '#F43F5E'];
 
 export default function MembersScreen() {
-  const router = useRouter();
-  const { lang, t } = useLanguage();
+  const { t } = useLanguage();
   const { members, handleDeleteMember, handleAddMember, handleUpdateMember } = useDashboard();
-
+  
   const [isAddVisible, setIsAddVisible] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
 
@@ -77,7 +76,7 @@ export default function MembersScreen() {
                 <Text style={styles.memberName}>{member.name}</Text>
                 {index === 0 && (
                   <View style={styles.defaultTag}>
-                    <Text style={styles.defaultTagText}>{lang === 'zh-CN' ? '默认成员' : 'Default'}</Text>
+                    <Text style={styles.defaultTagText}>{t.allMembersFilter === '全部成员' ? '默认成员' : 'Default'}</Text>
                   </View>
                 )}
               </View>

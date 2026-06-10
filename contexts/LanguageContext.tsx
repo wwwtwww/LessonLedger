@@ -1,12 +1,12 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 
-// 1. 国际化多语言字典库 (i18n)
+// 1. 国际化多语言字典库 (i18n)      
 const i18n = {
   'zh-CN': {
     title: '🎒 时课账本',
-    subTitle: 'LessonLedger Pro',
-    totalInvestment: '累计学费投入',
-    activeProjects: '进行中项目',
+    subTitle: 'LessonLedger Pro',    
+    totalInvestment: '累计学费投入', 
+    activeProjects: '进行中项目',    
     totalRemaining: '全家剩余总课时',
     switchLang: 'English',
     allMembers: '👥 全员总览',
@@ -69,7 +69,18 @@ const i18n = {
     all: '全部',
     active: '进行中',
     completed: '已完成',
-    deleted: '已删除'
+    deleted: '已删除',
+    today: '今天',
+    allMembersFilter: '全部成员',
+    checkInDetail: '打卡详情',
+    checkInSuccess: '打卡成功',
+    courseLabel: '课程',
+    memberLabel: '成员',
+    changeLabel: '变动',
+    timeLabel: '时间',
+    noteLabel: '备注',
+    classPractice: '课堂练习',
+    hapticFeedback: 'Haptics 反馈'
   },
   'en-US': {
     title: '🎒 LessonLedger',
@@ -138,7 +149,18 @@ const i18n = {
     all: 'All',
     active: 'Active',
     completed: 'Completed',
-    deleted: 'Deleted'
+    deleted: 'Deleted',
+    today: 'Today',
+    allMembersFilter: 'All Members',
+    checkInDetail: 'Check-in Detail',
+    checkInSuccess: 'Check-in Success',
+    courseLabel: 'Course',
+    memberLabel: 'Member',
+    changeLabel: 'Change',
+    timeLabel: 'Time',
+    noteLabel: 'Note',
+    classPractice: 'Class practice',
+    hapticFeedback: 'Haptics Feedback'
   }
 };
 
