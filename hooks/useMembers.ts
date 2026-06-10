@@ -4,6 +4,7 @@ import { Member } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../utils/supabase';
 import { storage } from '../utils/storage';
+import { syncQueue, SyncOperation } from '../utils/syncQueue';
 
 export function useMembers() {
   const { lang } = useLanguage();
@@ -48,54 +49,93 @@ export function useMembers() {
   }, [fetchMembers]);
 
   const handleAddMember = useCallback(async (name: string, icon: string, themeColor: string) => {
-    const newMember = { name, icon, themeColor, isDeleted: false };
+    const tempId = `temp_${Date.now()}`;
+    const newMember: Member = { id: tempId, name, icon, themeColor, isDeleted: false };
+
+    // 乐观更新：立即更新 UI + 缓存（使用函数式 setState 保证拿到最新值）
+    setAllMembers(prev => {
+      const updated = [...prev, newMember];
+      storage.setMembers(updated);
+      return updated;
+    });
+
+    // 尝试同步到 Supabase
     const { data, error } = await supabase
       .from('members')
-      .insert([newMember])
+      .insert([{ name, icon, themeColor, isDeleted: false }])
       .select();
-    
-    if (error) {
-      console.error('Error adding member:', error.message, error.details, error.hint);
-      if (Platform.OS === 'web') alert(`Failed to add member: ${error.message}`);
-      else Alert.alert('Error', `Failed to add member: ${error.message}`);
+
+    if (error || !data) {
+      console.error('Error adding member (will retry):', error?.message);
+      await syncQueue.add({
+        table: 'members',
+        type: 'insert',
+        payload: { name, icon, themeColor, isDeleted: false },
+        tempId,
+      });
       return;
     }
 
-    if (data) {
-      setAllMembers(prev => [...prev, data[0]]);
-    }
+    // 用云端 ID 替换临时 ID
+    setAllMembers(prev => {
+      const updated = prev.map(m => m.id === tempId ? { ...m, id: data[0].id } : m);
+      storage.setMembers(updated);
+      return updated;
+    });
   }, []);
 
   const handleUpdateMember = useCallback(async (id: string, data: Partial<Member>) => {
     const updateData = { ...data };
-    delete updateData.id; // 确保不更新主键
+    delete updateData.id;
 
+    // 乐观更新
+    setAllMembers(prev => {
+      const updated = prev.map(m => m.id === id ? { ...m, ...data } : m);
+      storage.setMembers(updated);
+      return updated;
+    });
+
+    // 尝试同步
     const { error } = await supabase
       .from('members')
       .update(updateData)
       .eq('id', id);
-    
-    if (error) {
-      console.error('Error updating member:', error.message);
-      if (Platform.OS === 'web') alert(`Failed to update member: ${error.message}`);
-      else Alert.alert('Error', `Failed to update member: ${error.message}`);
-      return;
-    }
 
-    setAllMembers(prev => prev.map(m => m.id === id ? { ...m, ...data } : m));
+    if (error) {
+      console.error('Error updating member (will retry):', error.message);
+      await syncQueue.add({
+        table: 'members',
+        type: 'update',
+        payload: { id, ...updateData },
+      });
+    }
   }, []);
 
   const handleDeleteMember = useCallback(async (id: string) => {
+    // 乐观更新
+    setAllMembers(prev => {
+      const updated = prev.map(m => m.id === id ? { ...m, isDeleted: true } : m);
+      storage.setMembers(updated);
+      return updated;
+    });
+
+    if (id === currentMemberId) {
+      setCurrentMemberId('all');
+    }
+
+    // 尝试同步
     const { error } = await supabase
       .from('members')
       .update({ isDeleted: true })
       .eq('id', id);
-    
-    if (!error) {
-      setAllMembers(prev => prev.map(m => m.id === id ? { ...m, isDeleted: true } : m));
-      if (id === currentMemberId) {
-        setCurrentMemberId('all');
-      }
+
+    if (error) {
+      console.error('Error deleting member (will retry):', error.message);
+      await syncQueue.add({
+        table: 'members',
+        type: 'update',
+        payload: { id, isDeleted: true },
+      });
     }
   }, [currentMemberId]);
 
