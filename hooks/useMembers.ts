@@ -4,7 +4,6 @@ import { Member } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../utils/supabase';
 import { storage } from '../utils/storage';
-import { syncQueue, SyncOperation } from '../utils/syncQueue';
 
 export function useMembers() {
   const { lang } = useLanguage();
@@ -66,12 +65,14 @@ export function useMembers() {
       .select();
 
     if (error || !data) {
-      console.error('Error adding member (will retry):', error?.message);
-      await syncQueue.add({
-        table: 'members',
-        type: 'insert',
-        payload: { name, icon, themeColor, isDeleted: false },
-        tempId,
+      console.error('Error adding member:', error?.message, error?.details, error?.hint);
+      if (Platform.OS === 'web') alert(`Failed to add member: ${error?.message}`);
+      else Alert.alert('Error', `Failed to add member: ${error?.message}`);
+      // 回退乐观更新
+      setAllMembers(prev => {
+        const reverted = prev.filter(m => m.id !== tempId);
+        storage.setMembers(reverted);
+        return reverted;
       });
       return;
     }
@@ -102,12 +103,10 @@ export function useMembers() {
       .eq('id', id);
 
     if (error) {
-      console.error('Error updating member (will retry):', error.message);
-      await syncQueue.add({
-        table: 'members',
-        type: 'update',
-        payload: { id, ...updateData },
-      });
+      console.error('Error updating member:', error.message, error.details, error.hint);
+      if (Platform.OS === 'web') alert(`Failed to update member: ${error.message}`);
+      else Alert.alert('Error', `Failed to update member: ${error.message}`);
+      return;
     }
   }, []);
 
@@ -130,12 +129,8 @@ export function useMembers() {
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting member (will retry):', error.message);
-      await syncQueue.add({
-        table: 'members',
-        type: 'update',
-        payload: { id, isDeleted: true },
-      });
+      console.error('Error deleting member:', error.message);
+      return;
     }
   }, [currentMemberId]);
 

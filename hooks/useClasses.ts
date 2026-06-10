@@ -5,7 +5,6 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../utils/supabase';
 import { storage } from '../utils/storage';
 import { scheduleClassReminders, cancelReminders } from '../utils/notifications';
-import { syncQueue } from '../utils/syncQueue';
 
 export function useClasses(currentMemberId: string, members: Member[]) {
   const { t } = useLanguage();
@@ -100,12 +99,15 @@ export function useClasses(currentMemberId: string, members: Member[]) {
       .select();
 
     if (error || !data) {
-      console.error('Error adding class (will retry):', error?.message);
-      await syncQueue.add({
-        table: 'classes',
-        type: 'insert',
-        payload: newClassPayload,
-        tempId,
+      console.error('Error adding class:', error?.message);
+      const errorMsg = `Failed to add course: ${error?.message || 'Unknown error'}`;
+      if (Platform.OS === 'web') alert(errorMsg);
+      else Alert.alert('Error', errorMsg);
+      // 回退乐观更新
+      setClasses(prev => {
+        const reverted = prev.filter(c => c.id !== tempId);
+        storage.setClasses(reverted);
+        return reverted;
       });
       return;
     }
@@ -149,12 +151,10 @@ export function useClasses(currentMemberId: string, members: Member[]) {
       .eq('id', id);
 
     if (error) {
-      console.error('Error updating class (will retry):', error.message);
-      await syncQueue.add({
-        table: 'classes',
-        type: 'update',
-        payload: { id, ...updateData },
-      });
+      console.error('Error updating class:', error.message);
+      if (Platform.OS === 'web') alert(`Failed to update course: ${error.message}`);
+      else Alert.alert('Error', `Failed to update course: ${error.message}`);
+      return;
     }
   }, [classes, members]);
 
@@ -176,12 +176,9 @@ export function useClasses(currentMemberId: string, members: Member[]) {
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting class (will retry):', error.message);
-      await syncQueue.add({
-        table: 'classes',
-        type: 'update',
-        payload: { id, isDeleted: true },
-      });
+      console.error('Error deleting class:', error.message);
+      Alert.alert('Error', `Failed to delete course: ${error.message}`);
+      return;
     }
   }, [classes]);
 
