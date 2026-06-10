@@ -4,6 +4,7 @@ import { Member } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../utils/supabase';
 import { storage } from '../utils/storage';
+import { log } from '../utils/logger';
 
 export function useMembers() {
   const { lang } = useLanguage();
@@ -29,7 +30,7 @@ export function useMembers() {
       .order('id', { ascending: true });
 
     if (error) {
-      console.error('Error fetching members:', error.message);
+      log.error('useMembers', 'Error fetching members', { message: error.message });
       if (!cached) setIsLoading(false);
       return data;
     }
@@ -65,7 +66,7 @@ export function useMembers() {
       .select();
 
     if (error || !data) {
-      console.error('Error adding member:', error?.message, error?.details, error?.hint);
+      log.error('useMembers', 'Error adding member', { message: error?.message, details: error?.details, hint: error?.hint });
       if (Platform.OS === 'web') alert(`Failed to add member: ${error?.message}`);
       else Alert.alert('Error', `Failed to add member: ${error?.message}`);
       // 回退乐观更新
@@ -103,7 +104,7 @@ export function useMembers() {
       .eq('id', id);
 
     if (error) {
-      console.error('Error updating member:', error.message, error.details, error.hint);
+      log.error('useMembers', 'Error updating member', { message: error.message, details: error.details, hint: error.hint });
       if (Platform.OS === 'web') alert(`Failed to update member: ${error.message}`);
       else Alert.alert('Error', `Failed to update member: ${error.message}`);
       return;
@@ -129,7 +130,7 @@ export function useMembers() {
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting member:', error.message);
+      log.error('useMembers', 'Error deleting member', { message: error.message });
       return;
     }
   }, [currentMemberId]);
