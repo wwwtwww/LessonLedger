@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics';
 import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Member } from '../../types';
+import { log } from '../../utils/logger';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -90,7 +91,7 @@ const MemberTabs: React.FC<MemberTabsProps> = ({
       <TouchableOpacity 
         style={[styles.memberTab, styles.addMemberTab]} 
         onPress={() => {
-          console.log('MemberTabs: Add Member pressed');
+          log.info('MemberTabs', 'Add Member pressed');
           onAddMemberPress();
         }}
       >
