@@ -1,8 +1,9 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Platform, Alert } from 'react-native';
 import { ClassItem, LogItem, Member } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../utils/supabase';
+import { storage } from '../utils/storage';
 import { scheduleClassReminders, cancelReminders } from '../utils/notifications';
 
 export function useClasses(currentMemberId: string, members: Member[]) {
@@ -13,30 +14,54 @@ export function useClasses(currentMemberId: string, members: Member[]) {
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
+
+    // Step A: 同步读缓存
+    const [cachedClasses, cachedLogs] = await Promise.all([
+      storage.getClasses<ClassItem[] | null>(),
+      storage.getLogs<LogItem[] | null>(),
+    ]);
+    if (cachedClasses && cachedClasses.length > 0) {
+      setClasses(cachedClasses);
+      setIsLoading(false);
+    }
+    if (cachedLogs && cachedLogs.length > 0) {
+      setLogs(cachedLogs);
+    }
+
+    // Step B: 后台拉取 Supabase
     const [classesRes, logsRes] = await Promise.all([
       supabase.from('classes').select('*').is('isDeleted', false).order('id', { ascending: true }),
-      supabase.from('logs').select('*').order('created_at', { ascending: false }).limit(20)
+      supabase.from('logs').select('*').order('created_at', { ascending: false }).limit(20),
     ]);
 
     if (!classesRes.error && classesRes.data) {
       const formattedClasses = classesRes.data.map((c: any) => ({
         ...c,
-        notificationIds: c.notificationids !== undefined ? c.notificationids : c.notificationIds
+        notificationIds: c.notificationids !== undefined ? c.notificationids : c.notificationIds,
       })) as ClassItem[];
       setClasses(formattedClasses);
+      await storage.setClasses(formattedClasses);
+    } else if (!cachedClasses) {
+      setIsLoading(false);
     }
+
     if (!logsRes.error && logsRes.data) {
-      // 转换 Supabase 的 created_at 为我们需要的 time 格式
       const formattedLogs = logsRes.data.map((log: any) => ({
         id: log.id.toString(),
         time: new Date(log.created_at).toLocaleString(),
         text: log.text,
-        classId: log.class_id?.toString()
+        classId: log.class_id?.toString(),
       })) as LogItem[];
       setLogs(formattedLogs);
+      await storage.setLogs(formattedLogs);
     }
+
     setIsLoading(false);
   }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const filteredClasses = useMemo(() => {
     const memberMap = members.reduce((acc, m) => {
