@@ -7,7 +7,6 @@ import {
   StyleSheet,
   Platform,
   Modal,
-  Alert,
 } from 'react-native';
 import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop, BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { useLanguage } from '../../contexts/LanguageContext';
