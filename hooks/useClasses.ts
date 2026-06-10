@@ -4,6 +4,7 @@ import { ClassItem, LogItem, Member } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../utils/supabase';
 import { storage } from '../utils/storage';
+import { log } from '../utils/logger';
 import { scheduleClassReminders, cancelReminders } from '../utils/notifications';
 
 export function useClasses(currentMemberId: string, members: Member[]) {
@@ -80,7 +81,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
   }, [classes, currentMemberId, members]);
 
   const handleAddClass = useCallback(async (classItem: Omit<ClassItem, 'id' | 'doneLessons' | 'isDeleted' | 'owner' | 'notificationIds'>) => {
-    console.log('Adding class:', classItem);
+    log.info('useClasses', 'Adding class', classItem);
     const tempId = `temp_${Date.now()}`;
     const newClass: ClassItem = { ...classItem, id: tempId, doneLessons: 0, isDeleted: false, notificationIds: [] };
 
@@ -99,7 +100,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
       .select();
 
     if (error || !data) {
-      console.error('Error adding class:', error?.message);
+      log.error('useClasses', 'Error adding class', { message: error?.message });
       const errorMsg = `Failed to add course: ${error?.message || 'Unknown error'}`;
       if (Platform.OS === 'web') alert(errorMsg);
       else Alert.alert('Error', errorMsg);
@@ -126,7 +127,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
   }, [members]);
 
   const handleUpdateClass = useCallback(async (id: string, data: Partial<ClassItem>) => {
-    console.log('Updating class:', id, data);
+    log.info('useClasses', 'Updating class', { id, data });
     const oldClass = classes.find(c => c.id === id);
     await cancelReminders(oldClass?.notificationIds);
 
@@ -151,7 +152,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
       .eq('id', id);
 
     if (error) {
-      console.error('Error updating class:', error.message);
+      log.error('useClasses', 'Error updating class', { message: error.message });
       if (Platform.OS === 'web') alert(`Failed to update course: ${error.message}`);
       else Alert.alert('Error', `Failed to update course: ${error.message}`);
       return;
@@ -159,7 +160,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
   }, [classes, members]);
 
   const handleDeleteClass = useCallback(async (id: string) => {
-    console.log('Deleting class:', id);
+    log.info('useClasses', 'Deleting class', { id });
     const oldClass = classes.find(c => c.id === id);
     await cancelReminders(oldClass?.notificationIds);
 
@@ -176,7 +177,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting class:', error.message);
+      log.error('useClasses', 'Error deleting class', { message: error.message });
       Alert.alert('Error', `Failed to delete course: ${error.message}`);
       return;
     }
@@ -218,7 +219,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
         .eq('id', classId);
 
       if (updateError) {
-        console.error('Update check-in failed:', updateError);
+        log.error('useClasses', 'Update check-in failed', updateError);
         return;
       }
 
@@ -229,7 +230,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
         .select();
 
       if (logError) {
-        console.error('Insert log failed:', logError);
+        log.error('useClasses', 'Insert log failed', logError);
         const errorMsg = `Check-in succeeded but log was not saved: ${logError.message}`;
         if (Platform.OS === 'web') alert(errorMsg);
         else Alert.alert('Warning', errorMsg);
