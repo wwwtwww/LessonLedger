@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import * as SplashScreen from 'expo-splash-screen';
 import {
   StyleSheet,
   Text,
@@ -53,8 +54,6 @@ export default function DashboardPage() {
     handleAddClass,
     handleUpdateClass,
     handleCheckIn,
-    fetchData,
-    fetchMembers,
     allClasses
   } = useDashboard();
 
@@ -62,18 +61,21 @@ export default function DashboardPage() {
   const [isAddClassVisible, setIsAddClassVisible] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [editingClass, setEditingClass] = useState<ClassItem | null>(null);
+  const [appIsReady, setAppIsReady] = useState(false);
 
   // 初始化加载
   useEffect(() => {
-    const initApp = async () => {
-      await requestPermissionsAsync();
-      await Promise.all([
-        fetchMembers(),
-        fetchData()
-      ]);
-    };
-    initApp();
-  }, [fetchData, fetchMembers]);
+    async function prepare() {
+      try {
+        await SplashScreen.preventAutoHideAsync();
+        await requestPermissionsAsync();
+      } finally {
+        setAppIsReady(true);
+        await SplashScreen.hideAsync();
+      }
+    }
+    prepare();
+  }, []);
 
   // 计算内容滚动的顶部偏移
   const headerOffset = insets.top + HEADER_CONTENT_HEIGHT + 24;
@@ -102,11 +104,12 @@ export default function DashboardPage() {
     router.push('/members');
   };
 
-  if (isLoading) {
+  // 首次加载：缓存为空且正在加载时显示骨架屏
+  if (!appIsReady || (isLoading && members.length === 0)) {
     return (
       <View style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color={themeColor || COLORS.primary} />
-        <Text style={styles.loadingText}>Syncing with Cloud...</Text>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
   }
