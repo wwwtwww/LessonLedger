@@ -7,6 +7,7 @@ import Animated, {
 import { Member } from '../../types';
 import { COLORS } from '../../utils/colors';
 import { triggerHaptic } from '../../utils/haptics';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface MemberSwitcherProps {
   members: Member[];
@@ -27,6 +28,8 @@ const SPRING_CONFIG = {
 };
 
 export default function MemberSwitcher({ members, currentId, onSelect, onAddPress, onLongPress }: MemberSwitcherProps) {
+  const { t } = useLanguage();
+
   return (
     <View style={styles.wrapper}>
       <ScrollView
@@ -38,7 +41,7 @@ export default function MemberSwitcher({ members, currentId, onSelect, onAddPres
           isActive={currentId === 'all'}
           onPress={() => onSelect('all')}
           icon="🌍"
-          name="全部"
+          name={t.allMembersFilter}
         />
 
         {members.map((member) => (

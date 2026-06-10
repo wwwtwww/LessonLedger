@@ -80,7 +80,12 @@ const i18n = {
     timeLabel: '时间',
     noteLabel: '备注',
     classPractice: '课堂练习',
-    hapticFeedback: 'Haptics 反馈'
+    hapticFeedback: 'Haptics 反馈',
+    appTitle: 'LessonLedger',
+    defaultMember: '默认成员',
+    totalExpense: '总支出',
+    consumedClasses: '总消耗课时',
+    remainingClasses: '剩余课时'
   },
   'en-US': {
     title: '🎒 LessonLedger',
@@ -160,7 +165,12 @@ const i18n = {
     timeLabel: 'Time',
     noteLabel: 'Note',
     classPractice: 'Class practice',
-    hapticFeedback: 'Haptics Feedback'
+    hapticFeedback: 'Haptics Feedback',
+    appTitle: 'LessonLedger',
+    defaultMember: 'Default',
+    totalExpense: 'Total Expense',
+    consumedClasses: 'Consumed',
+    remainingClasses: 'Remaining'
   }
 };
 

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, StatusBar } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { COLORS } from '../utils/colors';
 import { useDashboard } from '../hooks/useDashboard';
@@ -10,7 +9,6 @@ import SwipeableItem from '../components/ui/SwipeableItem';
 import { formatSchedule } from '../utils/formatters';
 
 export default function CoursesScreen() {
-  const router = useRouter();
   const { t, lang } = useLanguage();
   const { allClasses, members, handleDeleteClass } = useDashboard();
   const [activeTab, setActiveTab] = useState('all');

@@ -14,11 +14,11 @@ interface FitnessSummaryCardsProps {
   themeColor?: string;
 }
 
-const FitnessSummaryCards: React.FC<FitnessSummaryCardsProps> = ({
+const FitnessSummaryCards: React.FC<FitnessSummaryCardsProps> = ({      
   stats,
   themeColor = COLORS.primary,
 }) => {
-  const { lang } = useLanguage();
+  const { lang, t } = useLanguage();
   const { totalSpent, totalClasses, totalRemaining } = stats;
   const router = useRouter();
 
@@ -30,7 +30,7 @@ const FitnessSummaryCards: React.FC<FitnessSummaryCardsProps> = ({
           <View style={[styles.iconWrapper, { backgroundColor: '#F0F9FF' }]}>
             <Text style={styles.iconText}>¥</Text>
           </View>
-          <Text style={styles.label}>{lang === 'zh-CN' ? '总支出' : 'Total Expense'}</Text>
+          <Text style={styles.label}>{t.totalExpense}</Text>
           <Text style={[styles.value, { color: '#0F172A' }]}>
             {lang === 'zh-CN' ? '¥' : '$'}{totalSpent.toLocaleString()}
           </Text>
@@ -41,20 +41,20 @@ const FitnessSummaryCards: React.FC<FitnessSummaryCardsProps> = ({
           <View style={[styles.iconWrapper, { backgroundColor: '#F0FDF4' }]}>
             <Text style={styles.iconText}>✓</Text>
           </View>
-          <Text style={styles.label}>{lang === 'zh-CN' ? '总消耗课时' : 'Consumed'}</Text>
+          <Text style={styles.label}>{t.consumedClasses}</Text>
           <Text style={[styles.value, { color: '#22C55E' }]}>{totalClasses}</Text>
         </View>
 
         {/* Column 3: Total Remaining (Navigates to Courses) */}
-        <TouchableOpacity 
-          style={styles.column} 
+        <TouchableOpacity
+          style={styles.column}
           onPress={() => router.push('/courses')}
           activeOpacity={0.7}
         >
           <View style={[styles.iconWrapper, { backgroundColor: '#EEF2FF' }]}>
             <Text style={styles.iconText}>⏳</Text>
           </View>
-          <Text style={styles.label}>{lang === 'zh-CN' ? '剩余课时' : 'Remaining'}</Text>
+          <Text style={styles.label}>{t.remainingClasses}</Text>
           <Text style={[styles.value, { color: '#6366F1' }]}>{totalRemaining}</Text>
         </TouchableOpacity>
       </View>

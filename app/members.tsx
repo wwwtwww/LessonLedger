@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, StatusBar, Alert, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { COLORS } from '../utils/colors';
 import { useDashboard } from '../hooks/useDashboard';
@@ -76,7 +75,7 @@ export default function MembersScreen() {
                 <Text style={styles.memberName}>{member.name}</Text>
                 {index === 0 && (
                   <View style={styles.defaultTag}>
-                    <Text style={styles.defaultTagText}>{t.allMembersFilter === '全部成员' ? '默认成员' : 'Default'}</Text>
+                    <Text style={styles.defaultTagText}>{t.defaultMember}</Text>
                   </View>
                 )}
               </View>
