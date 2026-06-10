@@ -90,11 +90,11 @@ export default function DashboardPage() {
     setEditingMember(null);
   };
 
-  const onSaveClass = (data: { id?: string; name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: ScheduleEntry[]; unitType: 'lesson' | 'session' }) => {
+  const onSaveClass = async (data: { id?: string; name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: ScheduleEntry[]; unitType: 'lesson' | 'session' }) => {
     if (data.id) {
-      handleUpdateClass(data.id, data);
+      await handleUpdateClass(data.id, data);
     } else {
-      handleAddClass(data);
+      await handleAddClass(data);
     }
     setIsAddClassVisible(false);
     setEditingClass(null);

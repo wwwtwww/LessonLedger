@@ -119,9 +119,14 @@ export function useClasses(currentMemberId: string, members: Member[]) {
     }
 
     const memberName = members.find(m => m.id === classItem.memberId)?.name || '未知';
-    const ids = await scheduleClassReminders(data[0] as ClassItem, memberName);
-    if (ids.length > 0) {
-      await supabase.from('classes').update({ notificationids: ids }).eq('id', data[0].id);
+    let ids: string[] = [];
+    try {
+      ids = await scheduleClassReminders(data[0] as ClassItem, memberName);
+      if (ids.length > 0) {
+        await supabase.from('classes').update({ notificationids: ids }).eq('id', data[0].id);
+      }
+    } catch (e) {
+      log.warn('useClasses', 'Failed to schedule reminders (non-critical)', e);
     }
 
     setClasses(prev => {
@@ -136,11 +141,16 @@ export function useClasses(currentMemberId: string, members: Member[]) {
     pendingChanges.current++;
     log.info('useClasses', 'Updating class', { id, data });
     const oldClass = classes.find(c => c.id === id);
-    await cancelReminders(oldClass?.notificationIds);
 
-    const memberName = members.find(m => m.id === (data.memberId || oldClass?.memberId))?.name || '未知';
-    const updatedClass = { ...oldClass, ...data } as ClassItem;
-    const ids = await scheduleClassReminders(updatedClass, memberName);
+    let ids: string[] = [];
+    try {
+      await cancelReminders(oldClass?.notificationIds);
+      const memberName = members.find(m => m.id === (data.memberId || oldClass?.memberId))?.name || '未知';
+      const updatedClass = { ...oldClass, ...data } as ClassItem;
+      ids = await scheduleClassReminders(updatedClass, memberName);
+    } catch (e) {
+      log.warn('useClasses', 'Failed to update reminders (non-critical)', e);
+    }
 
     // 乐观更新
     setClasses(prev => {
@@ -172,7 +182,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
     pendingChanges.current++;
     log.info('useClasses', 'Deleting class', { id });
     const oldClass = classes.find(c => c.id === id);
-    await cancelReminders(oldClass?.notificationIds);
+    try { await cancelReminders(oldClass?.notificationIds); } catch {}
 
     // 乐观更新
     setClasses(prev => {
@@ -216,13 +226,14 @@ export function useClasses(currentMemberId: string, members: Member[]) {
         return;
       }
 
-      await cancelReminders(item.notificationIds);
+      try { await cancelReminders(item.notificationIds); } catch {}
 
       const nextDoneLessons = item.doneLessons + 1;
       const logMessage = `[${memberName}] ${className} -> -1 ${item.unitType === 'lesson' ? t.unitLesson : t.unitSession}`;
 
       const updatedClass = { ...item, doneLessons: nextDoneLessons };
-      const ids = await scheduleClassReminders(updatedClass, memberName);
+      let ids: string[] = [];
+      try { ids = await scheduleClassReminders(updatedClass, memberName); } catch {}
 
       // 1. 更新云端课程表
       const { error: updateError } = await supabase
