@@ -323,6 +323,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 14, color: '#64748B', marginBottom: 8 },
   input: { borderBottomWidth: 1, borderBottomColor: '#E2E8F0', paddingVertical: 12, fontSize: 16, color: COLORS.textPrimary },
   selectRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', paddingVertical: 12 },
+  memberPicker: { marginBottom: 8 },
   selectText: { fontSize: 16, color: COLORS.textPrimary },
   unitTabs: { flexDirection: 'row', backgroundColor: '#F1F5F9', borderRadius: 12, padding: 4 },
   unitTab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8 },
