@@ -5,6 +5,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../utils/supabase';
 import { storage } from '../utils/storage';
 import { scheduleClassReminders, cancelReminders } from '../utils/notifications';
+import { syncQueue } from '../utils/syncQueue';
 
 export function useClasses(currentMemberId: string, members: Member[]) {
   const { t } = useLanguage();
@@ -81,30 +82,45 @@ export function useClasses(currentMemberId: string, members: Member[]) {
 
   const handleAddClass = useCallback(async (classItem: Omit<ClassItem, 'id' | 'doneLessons' | 'isDeleted' | 'owner' | 'notificationIds'>) => {
     console.log('Adding class:', classItem);
-    const newClass = { ...classItem, doneLessons: 0, isDeleted: false };
+    const tempId = `temp_${Date.now()}`;
+    const newClass: ClassItem = { ...classItem, id: tempId, doneLessons: 0, isDeleted: false, notificationIds: [] };
+
+    // 乐观更新
+    setClasses(prev => {
+      const updated = [...prev, newClass];
+      storage.setClasses(updated);
+      return updated;
+    });
+
+    // 尝试同步
+    const newClassPayload = { ...classItem, doneLessons: 0, isDeleted: false };
     const { data, error } = await supabase
       .from('classes')
-      .insert([newClass])
+      .insert([newClassPayload])
       .select();
 
-    if (error) {
-      console.error('Error adding class:', error.message);
-      if (Platform.OS === 'web') alert(`Failed to add course: ${error.message}`);
-      else Alert.alert('Error', `Failed to add course: ${error.message}`);
+    if (error || !data) {
+      console.error('Error adding class (will retry):', error?.message);
+      await syncQueue.add({
+        table: 'classes',
+        type: 'insert',
+        payload: newClassPayload,
+        tempId,
+      });
       return;
     }
 
-    if (data) {
-      console.log('Class added successfully:', data[0]);
-      const memberName = members.find(m => m.id === classItem.memberId)?.name || '未知';
-      const ids = await scheduleClassReminders(data[0] as ClassItem, memberName);
-
-      if (ids.length > 0) {
-        await supabase.from('classes').update({ notificationids: ids }).eq('id', data[0].id);
-      }
-
-      setClasses(prev => [...prev, { ...data[0], notificationIds: ids }]);
+    const memberName = members.find(m => m.id === classItem.memberId)?.name || '未知';
+    const ids = await scheduleClassReminders(data[0] as ClassItem, memberName);
+    if (ids.length > 0) {
+      await supabase.from('classes').update({ notificationids: ids }).eq('id', data[0].id);
     }
+
+    setClasses(prev => {
+      const updated = prev.map(c => c.id === tempId ? { ...data[0], notificationIds: ids } : c);
+      storage.setClasses(updated);
+      return updated;
+    });
   }, [members]);
 
   const handleUpdateClass = useCallback(async (id: string, data: Partial<ClassItem>) => {
@@ -116,9 +132,16 @@ export function useClasses(currentMemberId: string, members: Member[]) {
     const updatedClass = { ...oldClass, ...data } as ClassItem;
     const ids = await scheduleClassReminders(updatedClass, memberName);
 
+    // 乐观更新
+    setClasses(prev => {
+      const updated = prev.map(c => c.id === id ? { ...c, ...data, notificationIds: ids } : c);
+      storage.setClasses(updated);
+      return updated;
+    });
+
     const updateData: any = { ...data, notificationIds: ids };
     delete updateData.id;
-    delete updateData.owner; // 确保不包含关联对象
+    delete updateData.owner;
 
     const { error } = await supabase
       .from('classes')
@@ -126,13 +149,13 @@ export function useClasses(currentMemberId: string, members: Member[]) {
       .eq('id', id);
 
     if (error) {
-      console.error('Error updating class:', error.message);
-      if (Platform.OS === 'web') alert(`Failed to update course: ${error.message}`);
-      else Alert.alert('Error', `Failed to update course: ${error.message}`);
-      return;
+      console.error('Error updating class (will retry):', error.message);
+      await syncQueue.add({
+        table: 'classes',
+        type: 'update',
+        payload: { id, ...updateData },
+      });
     }
-
-    setClasses(prev => prev.map(c => c.id === id ? { ...c, ...data, notificationIds: ids } : c));
   }, [classes, members]);
 
   const handleDeleteClass = useCallback(async (id: string) => {
@@ -140,18 +163,26 @@ export function useClasses(currentMemberId: string, members: Member[]) {
     const oldClass = classes.find(c => c.id === id);
     await cancelReminders(oldClass?.notificationIds);
 
+    // 乐观更新
+    setClasses(prev => {
+      const updated = prev.map(c => c.id === id ? { ...c, isDeleted: true } : c);
+      storage.setClasses(updated);
+      return updated;
+    });
+
     const { error } = await supabase
       .from('classes')
       .update({ isDeleted: true })
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting class:', error.message);
-      Alert.alert('Error', `Failed to delete course: ${error.message}`);
-      return;
+      console.error('Error deleting class (will retry):', error.message);
+      await syncQueue.add({
+        table: 'classes',
+        type: 'update',
+        payload: { id, isDeleted: true },
+      });
     }
-
-    setClasses(prev => prev.map(c => c.id === id ? { ...c, isDeleted: true } : c));
   }, [classes]);
 
   const stats = useMemo(() => {
@@ -208,15 +239,23 @@ export function useClasses(currentMemberId: string, members: Member[]) {
       }
 
       // 3. 更新本地状态
-      setClasses(prev => prev.map(c => c.id === classId ? { ...c, doneLessons: nextDoneLessons, notificationIds: ids } : c));
+      setClasses(prev => {
+        const updated = prev.map(c => c.id === classId ? { ...c, doneLessons: nextDoneLessons, notificationIds: ids } : c);
+        storage.setClasses(updated);
+        return updated;
+      });
 
       if (logData) {
         const newLog: LogItem = {
           id: logData[0].id.toString(),
           time: new Date(logData[0].created_at).toLocaleString(),
-          text: logMessage
+          text: logMessage,
         };
-        setLogs(prev => [newLog, ...prev]);
+        setLogs(prev => {
+          const updated = [newLog, ...prev];
+          storage.setLogs(updated);
+          return updated;
+        });
       }
     };
 
