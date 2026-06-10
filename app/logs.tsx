@@ -1,23 +1,16 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, StatusBar, Modal, Platform } from 'react-native';
-import { DrawerActions } from '@react-navigation/native';
-import { Stack, useRouter, useNavigation } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { triggerHaptic } from '../utils/haptics';
 import { COLORS } from '../utils/colors';
 import { useDashboard } from '../hooks/useDashboard';
 import { useLanguage } from '../contexts/LanguageContext';
+import AppHeader from '../components/ui/AppHeader';
 import { LogItem } from '../types';
 
 export default function LogsScreen() {
   const router = useRouter();
-  const navigation = useNavigation();
-  const { lang } = useLanguage();
-
-  const handleMenuPress = () => {
-    triggerHaptic('light');
-    navigation.dispatch(DrawerActions.toggleDrawer());
-  };
+  const { lang, t } = useLanguage();
   const { logs, allClasses, members } = useDashboard();
   const [selectedLog, setSelectedLog] = useState<LogItem | null>(null);
 
@@ -28,20 +21,27 @@ export default function LogsScreen() {
     let groupName = datePart;
     const today = new Date().toISOString().split('T')[0];
     if (datePart === today) groupName = lang === 'zh-CN' ? '今天' : 'Today';
-    
+
     if (!acc[groupName]) acc[groupName] = [];
     acc[groupName].push(log);
     return acc;
   }, {} as Record<string, LogItem[]>);
 
+  const headerRight = (
+    <TouchableOpacity style={styles.filterBtn}>
+      <Text style={styles.filterText}>{lang === 'zh-CN' ? '全部成员' : 'All Members'}</Text>
+      <Feather name="chevron-down" size={16} color={COLORS.textSecondary} />
+    </TouchableOpacity>
+  );
+
   const renderLogDetail = () => {
     if (!selectedLog) return null;
     const classItem = allClasses.find(c => c.id === selectedLog.classId);
     const member = members.find(m => m.id === classItem?.memberId);
-    
+
     let courseName = classItem?.name || selectedLog.text;
     let memberName = member?.name || 'Member';
-    
+
     if (!classItem && selectedLog.text.includes(' -> ')) {
       const match = selectedLog.text.match(/\[(.*?)\] (.*?) ->/);
       if (match) {
@@ -91,7 +91,7 @@ export default function LogsScreen() {
                 <Text style={styles.detailValue}>{lang === 'zh-CN' ? '课堂练习' : 'Class practice'}</Text>
               </View>
             </View>
-            
+
             <View style={styles.hapticFeedback}>
                <Feather name="activity" size={16} color="#94A3B8" />
                <Text style={styles.hapticText}>Haptics 反馈</Text>
@@ -105,17 +105,9 @@ export default function LogsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      <Stack.Screen options={{ headerShown: false }} />
 
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleMenuPress} style={styles.iconBtn}>
-          <Feather name="menu" size={24} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{lang === 'zh-CN' ? '打卡日志' : 'Logs'}</Text>
-        <TouchableOpacity style={styles.filterBtn}>
-          <Text style={styles.filterText}>{lang === 'zh-CN' ? '全部成员' : 'All Members'}</Text>
-          <Feather name="chevron-down" size={16} color={COLORS.textSecondary} />
-        </TouchableOpacity>
+      <View style={styles.headerWrapper}>
+        <AppHeader title={t.logs} rightComponent={headerRight} />
       </View>
 
       <ScrollView contentContainerStyle={styles.listContainer}>
@@ -171,10 +163,9 @@ export default function LogsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, height: 44, marginTop: 8 },
+  headerWrapper: { height: 56, paddingHorizontal: 4 },
   iconBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: COLORS.textPrimary },
-  filterBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, gap: 4 },
+  filterBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, gap: 4, marginRight: 8 },
   filterText: { fontSize: 14, color: COLORS.textSecondary, fontWeight: '500' },
   listContainer: { padding: 16 },
   group: { marginBottom: 24 },

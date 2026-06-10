@@ -1,60 +1,52 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, StatusBar } from 'react-native';
-import { Stack, useRouter, useNavigation } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { DrawerActions } from '@react-navigation/native';
-import { triggerHaptic } from '../utils/haptics';
 import { COLORS } from '../utils/colors';
 import { useDashboard } from '../hooks/useDashboard';
 import { useLanguage } from '../contexts/LanguageContext';
 import SwipeableItem from '../components/ui/SwipeableItem';
+import AppHeader from '../components/ui/AppHeader';
 import { formatSchedule } from '../utils/formatters';
 
 export default function CoursesScreen() {
   const router = useRouter();
-  const navigation = useNavigation();
-  const { lang } = useLanguage();
-
-  const handleMenuPress = () => {
-    triggerHaptic('light');
-    navigation.dispatch(DrawerActions.toggleDrawer());
-  };
+  const { t, lang } = useLanguage();
   const { allClasses, members, handleDeleteClass } = useDashboard();
-  const [activeTab, setActiveTab] = useState('全部');
+  const [activeTab, setActiveTab] = useState('all');
 
   const tabs = [
-    { key: '全部', label: lang === 'zh-CN' ? '全部' : 'All' },
-    { key: '进行中', label: lang === 'zh-CN' ? '进行中' : 'Active' },
-    { key: '已完成', label: lang === 'zh-CN' ? '已完成' : 'Completed' },
-    { key: '已删除', label: lang === 'zh-CN' ? '已删除' : 'Deleted' },
+    { key: 'all', label: t.all },
+    { key: 'active', label: t.active },
+    { key: 'completed', label: t.completed },
+    { key: 'deleted', label: t.deleted },
   ];
 
   const filteredClasses = allClasses.filter(c => {
-    if (activeTab === '已删除') return c.isDeleted;
+    if (activeTab === 'deleted') return c.isDeleted;
     if (c.isDeleted) return false;
-    if (activeTab === '进行中') return c.doneLessons < c.totalLessons;
-    if (activeTab === '已完成') return c.doneLessons >= c.totalLessons;
+    if (activeTab === 'active') return c.doneLessons < c.totalLessons;
+    if (activeTab === 'completed') return c.doneLessons >= c.totalLessons;
     return true;
   });
+
+  const headerRight = (
+    <View style={styles.headerRight}>
+      <TouchableOpacity style={styles.iconBtn}>
+        <Feather name="search" size={20} color={COLORS.textPrimary} />
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.iconBtn}>
+        <Feather name="plus" size={24} color={COLORS.textPrimary} />
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      <Stack.Screen options={{ headerShown: false }} />
 
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleMenuPress} style={styles.iconBtn}>
-          <Feather name="menu" size={24} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{lang === 'zh-CN' ? '我的课程' : 'My Courses'}</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconBtn}>
-            <Feather name="search" size={20} color={COLORS.textPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn}>
-            <Feather name="plus" size={24} color={COLORS.textPrimary} />
-          </TouchableOpacity>
-        </View>
+      <View style={styles.headerWrapper}>
+        <AppHeader title={t.courses} rightComponent={headerRight} />
       </View>
 
       <View style={styles.tabsContainer}>
@@ -136,9 +128,8 @@ export default function CoursesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, height: 44, marginTop: 8 },
+  headerWrapper: { height: 56, paddingHorizontal: 4 },
   iconBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: COLORS.textPrimary },
   headerRight: { flexDirection: 'row', alignItems: 'center' },
   tabsContainer: { flexDirection: 'row', paddingHorizontal: 20, marginTop: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
   tab: { marginRight: 24, paddingVertical: 12, position: 'relative' },

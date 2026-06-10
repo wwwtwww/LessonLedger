@@ -61,7 +61,15 @@ const i18n = {
     confirmDeleteMemberTitle: '确认删除成员',
     confirmDeleteMemberMsg: '确定要删除成员【{member}】吗？这将同时在列表中隐藏该成员的所有课程。',
     expenseChartTitle: '课程消费占比',
-    recentLogs: '最近记录'
+    recentLogs: '最近记录',
+    dashboard: '仪表盘',
+    courses: '我的课程',
+    members: '家庭成员',
+    logs: '打卡日志',
+    all: '全部',
+    active: '进行中',
+    completed: '已完成',
+    deleted: '已删除'
   },
   'en-US': {
     title: '🎒 LessonLedger',
@@ -122,7 +130,15 @@ const i18n = {
     confirmDeleteMemberTitle: 'Confirm Delete Member',
     confirmDeleteMemberMsg: 'Are you sure you want to delete member [{member}]? This will also hide all their courses from the list.',
     expenseChartTitle: 'Expense Ratio',
-    recentLogs: 'Recent Logs'
+    recentLogs: 'Recent Logs',
+    dashboard: 'Dashboard',
+    courses: 'My Courses',
+    members: 'Members',
+    logs: 'Logs',
+    all: 'All',
+    active: 'Active',
+    completed: 'Completed',
+    deleted: 'Deleted'
   }
 };
 

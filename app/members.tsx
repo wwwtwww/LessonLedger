@@ -1,29 +1,22 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, StatusBar, Alert, Platform } from 'react-native';
-import { Stack, useRouter, useNavigation } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { DrawerActions } from '@react-navigation/native';
-import { triggerHaptic } from '../utils/haptics';
 import { COLORS } from '../utils/colors';
 import { useDashboard } from '../hooks/useDashboard';
 import { useLanguage } from '../contexts/LanguageContext';
 import AddMemberSheet from '../components/sheets/AddMemberSheet';
 import SwipeableItem from '../components/ui/SwipeableItem';
+import AppHeader from '../components/ui/AppHeader';
 import { Member } from '../types';
 
 const THEME_COLORS = ['#6366F1', '#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#D946EF', '#F43F5E'];
 
 export default function MembersScreen() {
   const router = useRouter();
-  const navigation = useNavigation();
   const { lang, t } = useLanguage();
   const { members, handleDeleteMember, handleAddMember, handleUpdateMember } = useDashboard();
 
-  const handleMenuPress = () => {
-    triggerHaptic('light');
-    navigation.dispatch(DrawerActions.toggleDrawer());
-  };
-  
   const [isAddVisible, setIsAddVisible] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
 
@@ -55,19 +48,18 @@ export default function MembersScreen() {
     }
   };
 
+  const headerRight = (
+    <TouchableOpacity onPress={() => { setEditingMember(null); setIsAddVisible(true); }} style={styles.iconBtn}>
+      <Feather name="plus" size={24} color={COLORS.textPrimary} />
+    </TouchableOpacity>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      <Stack.Screen options={{ headerShown: false }} />
 
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleMenuPress} style={styles.iconBtn}>
-          <Feather name="menu" size={24} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{lang === 'zh-CN' ? '成员管理' : 'Members'}</Text>
-        <TouchableOpacity onPress={() => { setEditingMember(null); setIsAddVisible(true); }} style={styles.iconBtn}>
-          <Feather name="plus" size={24} color={COLORS.textPrimary} />
-        </TouchableOpacity>
+      <View style={styles.headerWrapper}>
+        <AppHeader title={t.members} rightComponent={headerRight} />
       </View>
 
       <ScrollView contentContainerStyle={styles.listContainer}>
@@ -115,9 +107,8 @@ export default function MembersScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, height: 44, marginTop: 8 },
+  headerWrapper: { height: 56, paddingHorizontal: 4 },
   iconBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: COLORS.textPrimary },
   listContainer: { padding: 16, gap: 12 },
   memberCard: {
     flexDirection: 'row',

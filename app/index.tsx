@@ -11,8 +11,7 @@ import {
   TouchableOpacity
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter, useNavigation } from 'expo-router';
-import { DrawerActions } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import { triggerHaptic } from '../utils/haptics';
 
 // UI Components
@@ -41,12 +40,6 @@ export default function DashboardPage() {
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
   const router = useRouter();
-  const navigation = useNavigation();
-
-  const handleMenuPress = () => {
-    triggerHaptic('light');
-    navigation.dispatch(DrawerActions.toggleDrawer());
-  };
 
   // 使用聚合后的 useDashboard Hook
   const {
@@ -132,8 +125,8 @@ export default function DashboardPage() {
 
       <GlassHeader>
         <AppHeader 
+          title={t.dashboard}
           themeColor={themeColor} 
-          onMenuPress={handleMenuPress}
           onNotificationPress={() => router.push('/logs')}
         />
       </GlassHeader>
