@@ -44,7 +44,7 @@ export default function CoursesScreen() {
       <StatusBar barStyle="dark-content" />
       
       <View style={styles.headerWrapper}>
-        <AppHeader title={t.courses} rightComponent={headerRight} />
+         <AppHeader title={t.courses} rightComponent={headerRight} showBack />
       </View>
 
       <View style={styles.tabsContainer}>

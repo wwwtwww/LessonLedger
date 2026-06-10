@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Platform, Alert } from 'react-native';
 import { ClassItem, LogItem, Member } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -12,6 +12,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [logs, setLogs] = useState<LogItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const pendingChanges = useRef(0);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -40,8 +41,11 @@ export function useClasses(currentMemberId: string, members: Member[]) {
         ...c,
         notificationIds: c.notificationids !== undefined ? c.notificationids : c.notificationIds,
       })) as ClassItem[];
-      setClasses(formattedClasses);
-      await storage.setClasses(formattedClasses);
+      // 有未完成的写入操作时跳过覆盖，避免冲掉乐观更新
+      if (pendingChanges.current === 0) {
+        setClasses(formattedClasses);
+        await storage.setClasses(formattedClasses);
+      }
     } else if (!cachedClasses) {
       setIsLoading(false);
     }
@@ -81,6 +85,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
   }, [classes, currentMemberId, members]);
 
   const handleAddClass = useCallback(async (classItem: Omit<ClassItem, 'id' | 'doneLessons' | 'isDeleted' | 'owner' | 'notificationIds'>) => {
+    pendingChanges.current++;
     log.info('useClasses', 'Adding class', classItem);
     const tempId = `temp_${Date.now()}`;
     const newClass: ClassItem = { ...classItem, id: tempId, doneLessons: 0, isDeleted: false, notificationIds: [] };
@@ -100,11 +105,11 @@ export function useClasses(currentMemberId: string, members: Member[]) {
       .select();
 
     if (error || !data) {
+      pendingChanges.current--;
       log.error('useClasses', 'Error adding class', { message: error?.message });
       const errorMsg = `Failed to add course: ${error?.message || 'Unknown error'}`;
       if (Platform.OS === 'web') alert(errorMsg);
       else Alert.alert('Error', errorMsg);
-      // 回退乐观更新
       setClasses(prev => {
         const reverted = prev.filter(c => c.id !== tempId);
         storage.setClasses(reverted);
@@ -124,9 +129,11 @@ export function useClasses(currentMemberId: string, members: Member[]) {
       storage.setClasses(updated);
       return updated;
     });
+    pendingChanges.current--;
   }, [members]);
 
   const handleUpdateClass = useCallback(async (id: string, data: Partial<ClassItem>) => {
+    pendingChanges.current++;
     log.info('useClasses', 'Updating class', { id, data });
     const oldClass = classes.find(c => c.id === id);
     await cancelReminders(oldClass?.notificationIds);
@@ -152,14 +159,17 @@ export function useClasses(currentMemberId: string, members: Member[]) {
       .eq('id', id);
 
     if (error) {
+      pendingChanges.current--;
       log.error('useClasses', 'Error updating class', { message: error.message });
       if (Platform.OS === 'web') alert(`Failed to update course: ${error.message}`);
       else Alert.alert('Error', `Failed to update course: ${error.message}`);
       return;
     }
+    pendingChanges.current--;
   }, [classes, members]);
 
   const handleDeleteClass = useCallback(async (id: string) => {
+    pendingChanges.current++;
     log.info('useClasses', 'Deleting class', { id });
     const oldClass = classes.find(c => c.id === id);
     await cancelReminders(oldClass?.notificationIds);
@@ -177,10 +187,12 @@ export function useClasses(currentMemberId: string, members: Member[]) {
       .eq('id', id);
 
     if (error) {
+      pendingChanges.current--;
       log.error('useClasses', 'Error deleting class', { message: error.message });
       Alert.alert('Error', `Failed to delete course: ${error.message}`);
       return;
     }
+    pendingChanges.current--;
   }, [classes]);
 
   const stats = useMemo(() => {

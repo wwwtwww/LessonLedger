@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Alert, Platform } from 'react-native';
 import { Member } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -11,6 +11,7 @@ export function useMembers() {
   const [allMembers, setAllMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentMemberId, setCurrentMemberId] = useState<string>('all');
+  const pendingChanges = useRef(0);
 
   const fetchMembers = useCallback(async () => {
     setIsLoading(true);
@@ -35,7 +36,8 @@ export function useMembers() {
       return data;
     }
 
-    if (data) {
+    // 有未完成的写入操作时跳过覆盖
+    if (data && pendingChanges.current === 0) {
       setAllMembers(data);
       await storage.setMembers(data);
     }
@@ -49,6 +51,7 @@ export function useMembers() {
   }, [fetchMembers]);
 
   const handleAddMember = useCallback(async (name: string, icon: string, themeColor: string) => {
+    pendingChanges.current++;
     const tempId = `temp_${Date.now()}`;
     const newMember: Member = { id: tempId, name, icon, themeColor, isDeleted: false };
 
@@ -66,6 +69,7 @@ export function useMembers() {
       .select();
 
     if (error || !data) {
+      pendingChanges.current--;
       log.error('useMembers', 'Error adding member', { message: error?.message, details: error?.details, hint: error?.hint });
       if (Platform.OS === 'web') alert(`Failed to add member: ${error?.message}`);
       else Alert.alert('Error', `Failed to add member: ${error?.message}`);
@@ -84,9 +88,11 @@ export function useMembers() {
       storage.setMembers(updated);
       return updated;
     });
+    pendingChanges.current--;
   }, []);
 
   const handleUpdateMember = useCallback(async (id: string, data: Partial<Member>) => {
+    pendingChanges.current++;
     const updateData = { ...data };
     delete updateData.id;
 
@@ -104,14 +110,17 @@ export function useMembers() {
       .eq('id', id);
 
     if (error) {
+      pendingChanges.current--;
       log.error('useMembers', 'Error updating member', { message: error.message, details: error.details, hint: error.hint });
       if (Platform.OS === 'web') alert(`Failed to update member: ${error.message}`);
       else Alert.alert('Error', `Failed to update member: ${error.message}`);
       return;
     }
+    pendingChanges.current--;
   }, []);
 
   const handleDeleteMember = useCallback(async (id: string) => {
+    pendingChanges.current++;
     // 乐观更新
     setAllMembers(prev => {
       const updated = prev.map(m => m.id === id ? { ...m, isDeleted: true } : m);
@@ -130,9 +139,11 @@ export function useMembers() {
       .eq('id', id);
 
     if (error) {
+      pendingChanges.current--;
       log.error('useMembers', 'Error deleting member', { message: error.message });
       return;
     }
+    pendingChanges.current--;
   }, [currentMemberId]);
 
   const visibleMembers = useMemo(() => allMembers.filter(m => !m.isDeleted), [allMembers]);

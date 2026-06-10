@@ -57,7 +57,7 @@ export default function MembersScreen() {
       <StatusBar barStyle="dark-content" />
 
       <View style={styles.headerWrapper}>
-        <AppHeader title={t.members} rightComponent={headerRight} />
+         <AppHeader title={t.members} rightComponent={headerRight} showBack />
       </View>
 
       <ScrollView contentContainerStyle={styles.listContainer}>

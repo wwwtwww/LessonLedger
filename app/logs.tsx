@@ -106,7 +106,7 @@ export default function LogsScreen() {
       <StatusBar barStyle="dark-content" />
 
       <View style={styles.headerWrapper}>
-        <AppHeader title={t.logs} rightComponent={headerRight} />
+         <AppHeader title={t.logs} rightComponent={headerRight} showBack />
       </View>
 
       <ScrollView contentContainerStyle={styles.listContainer}>
