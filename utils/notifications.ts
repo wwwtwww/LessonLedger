@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { ScheduleEntry, ClassItem } from '../types';
+import { log } from './logger';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -94,7 +95,7 @@ export async function cancelReminders(ids?: string[]) {
     try {
       await Notifications.cancelScheduledNotificationAsync(id);
     } catch (e) {
-      console.log('Failed to cancel notification:', id);
+      log.error('notifications', 'Failed to cancel notification', { id });
     }
   }
 }
