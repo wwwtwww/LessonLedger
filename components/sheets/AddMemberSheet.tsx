@@ -9,7 +9,7 @@ import {
   Modal,
   Alert,
 } from 'react-native';
-import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop, BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Member } from '../../types';
 
@@ -29,7 +29,7 @@ export default function AddMemberSheet({ visible, onClose, onAdd, initialData }:
   const [themeColor, setThemeColor] = useState(PREDEFINED_COLORS[0]);
   const [error, setError] = useState('');
   const prevVisible = useRef(visible);
-  
+
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ['75%'], []);
 
@@ -37,7 +37,6 @@ export default function AddMemberSheet({ visible, onClose, onAdd, initialData }:
   useEffect(() => {
     if (Platform.OS !== 'web') {
       if (visible) {
-        Alert.alert('Debug', 'AddMemberModal is trying to present BottomSheet');
         bottomSheetModalRef.current?.present();
       } else {
         bottomSheetModalRef.current?.dismiss();
@@ -46,7 +45,7 @@ export default function AddMemberSheet({ visible, onClose, onAdd, initialData }:
   }, [visible]);
 
   const renderBackdrop = useCallback(
-    (props: any) => (
+    (props: BottomSheetBackdropProps) => (
       <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} pressBehavior="close" />
     ),
     []

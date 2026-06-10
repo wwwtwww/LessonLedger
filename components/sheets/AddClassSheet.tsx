@@ -8,7 +8,7 @@ import {
   Platform,
   Modal,
 } from 'react-native';
-import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop, BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Member, ClassItem, ScheduleEntry } from '../../types';
 import SchedulePicker from '../ui/SchedulePicker';
@@ -49,7 +49,7 @@ export default function AddClassSheet({ visible, onClose, onAdd, members, initia
   }, [visible]);
 
   const renderBackdrop = useCallback(
-    (props: any) => (
+    (props: BottomSheetBackdropProps) => (
       <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} pressBehavior="close" />
     ),
     []

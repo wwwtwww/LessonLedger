@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Platform, Alert } from 'react-native';
 import { ClassItem, LogItem, Member } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -22,7 +22,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
       const formattedClasses = classesRes.data.map((c: any) => ({
         ...c,
         notificationIds: c.notificationids !== undefined ? c.notificationids : c.notificationIds
-      }));
+      })) as ClassItem[];
       setClasses(formattedClasses);
     }
     if (!logsRes.error && logsRes.data) {
@@ -32,7 +32,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
         time: new Date(log.created_at).toLocaleString(),
         text: log.text,
         classId: log.class_id?.toString()
-      }));
+      })) as LogItem[];
       setLogs(formattedLogs);
     }
     setIsLoading(false);
@@ -61,7 +61,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
       .from('classes')
       .insert([newClass])
       .select();
-    
+
     if (error) {
       console.error('Error adding class:', error.message);
       if (Platform.OS === 'web') alert(`Failed to add course: ${error.message}`);
@@ -73,11 +73,11 @@ export function useClasses(currentMemberId: string, members: Member[]) {
       console.log('Class added successfully:', data[0]);
       const memberName = members.find(m => m.id === classItem.memberId)?.name || '未知';
       const ids = await scheduleClassReminders(data[0] as ClassItem, memberName);
-      
+
       if (ids.length > 0) {
         await supabase.from('classes').update({ notificationids: ids }).eq('id', data[0].id);
       }
-      
+
       setClasses(prev => [...prev, { ...data[0], notificationIds: ids }]);
     }
   }, [members]);
@@ -91,15 +91,15 @@ export function useClasses(currentMemberId: string, members: Member[]) {
     const updatedClass = { ...oldClass, ...data } as ClassItem;
     const ids = await scheduleClassReminders(updatedClass, memberName);
 
-    const updateData = { ...data, notificationIds: ids };
-    delete (updateData as any).id;
-    delete (updateData as any).owner; // 确保不包含关联对象
+    const updateData: any = { ...data, notificationIds: ids };
+    delete updateData.id;
+    delete updateData.owner; // 确保不包含关联对象
 
     const { error } = await supabase
       .from('classes')
       .update(updateData)
       .eq('id', id);
-    
+
     if (error) {
       console.error('Error updating class:', error.message);
       if (Platform.OS === 'web') alert(`Failed to update course: ${error.message}`);
@@ -119,7 +119,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
       .from('classes')
       .update({ isDeleted: true })
       .eq('id', id);
-    
+
     if (error) {
       console.error('Error deleting class:', error.message);
       Alert.alert('Error', `Failed to delete course: ${error.message}`);
@@ -184,7 +184,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
 
       // 3. 更新本地状态
       setClasses(prev => prev.map(c => c.id === classId ? { ...c, doneLessons: nextDoneLessons, notificationIds: ids } : c));
-      
+
       if (logData) {
         const newLog: LogItem = {
           id: logData[0].id.toString(),

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, StatusBar, Modal, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { COLORS } from '../utils/colors';
 import { useDashboard } from '../hooks/useDashboard';
@@ -9,7 +8,6 @@ import AppHeader from '../components/ui/AppHeader';
 import { LogItem } from '../types';
 
 export default function LogsScreen() {
-  const router = useRouter();
   const { t } = useLanguage();
   const { logs, allClasses, members } = useDashboard();
   const [selectedLog, setSelectedLog] = useState<LogItem | null>(null);
