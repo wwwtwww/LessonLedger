@@ -24,6 +24,7 @@ export interface ClassItem {
   unitType: 'lesson' | 'session';
   isDeleted?: boolean;
   notificationIds?: string[];
+  duration?: number;
 }
 
 export interface LogItem {

@@ -92,7 +92,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
     const classId = generateUUID();
 
     const memberName = members.find(m => m.id === classItem.memberId)?.name || '未知';
-    const newClass: ClassItem = { ...classItem, id: classId, doneLessons: 0, isDeleted: false, notificationIds: [] };
+    const newClass: ClassItem = { ...classItem, id: classId, doneLessons: 0, isDeleted: false, notificationIds: [], duration: classItem.duration || 60 };
     let ids: string[] = [];
     try {
       ids = await scheduleClassReminders(newClass, memberName);
@@ -110,7 +110,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
     });
 
     // 尝试同步
-    const newClassPayload = { id: classId, ...classItem, doneLessons: 0, isDeleted: false, notificationIds: ids };
+    const newClassPayload = { id: classId, ...classItem, doneLessons: 0, isDeleted: false, notificationIds: ids, duration: classItem.duration || 60 };
     const { error } = await supabase
       .from('classes')
       .insert([newClassPayload]);
