@@ -159,3 +159,38 @@ BEGIN
   END LOOP;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- 9. Enable RLS
+ALTER TABLE families ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE classes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE logs ENABLE ROW LEVEL SECURITY;
+
+-- Helper to get current user's family_id
+CREATE OR REPLACE FUNCTION get_current_family_id()
+RETURNS UUID AS $$
+  SELECT family_id FROM user_profiles WHERE id = auth.uid() LIMIT 1;
+$$ LANGUAGE sql STABLE;
+
+-- Policies for user_profiles
+CREATE POLICY "Users can view their own profile" ON user_profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can insert their own profile" ON user_profiles FOR INSERT WITH CHECK (auth.uid() = id);
+
+-- Policies for families
+CREATE POLICY "Users can view their own family" ON families FOR SELECT USING (id = get_current_family_id());
+
+-- Policies for members
+CREATE POLICY "Users can view family members" ON members FOR SELECT USING (family_id = get_current_family_id());
+CREATE POLICY "Users can insert family members" ON members FOR INSERT WITH CHECK (family_id = get_current_family_id());
+CREATE POLICY "Users can update family members" ON members FOR UPDATE USING (family_id = get_current_family_id());
+
+-- Policies for classes
+CREATE POLICY "Users can view family classes" ON classes FOR SELECT USING (family_id = get_current_family_id());
+CREATE POLICY "Users can insert family classes" ON classes FOR INSERT WITH CHECK (family_id = get_current_family_id());
+CREATE POLICY "Users can update family classes" ON classes FOR UPDATE USING (family_id = get_current_family_id());
+
+-- Policies for logs
+CREATE POLICY "Users can view family logs" ON logs FOR SELECT USING (family_id = get_current_family_id());
+CREATE POLICY "Users can insert family logs" ON logs FOR INSERT WITH CHECK (family_id = get_current_family_id());
+CREATE POLICY "Users can delete family logs" ON logs FOR DELETE USING (family_id = get_current_family_id());
