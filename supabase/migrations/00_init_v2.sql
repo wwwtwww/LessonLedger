@@ -84,7 +84,7 @@ BEGIN
     IF NEW.type = 'check_in' THEN
       UPDATE classes SET done_lessons = done_lessons + ABS(NEW.amount) WHERE id = NEW.class_id;
     ELSIF NEW.type = 'init' THEN
-      UPDATE classes SET done_lessons = ABS(NEW.amount) WHERE id = NEW.class_id;
+      UPDATE classes SET done_lessons = done_lessons + ABS(NEW.amount) WHERE id = NEW.class_id;
     ELSIF NEW.type = 'top_up' THEN
       UPDATE classes SET total_lessons = total_lessons + ABS(NEW.amount) WHERE id = NEW.class_id;
     END IF;
@@ -95,7 +95,7 @@ BEGIN
     ELSIF OLD.type = 'top_up' THEN
       UPDATE classes SET total_lessons = GREATEST(0, total_lessons - ABS(OLD.amount)) WHERE id = OLD.class_id;
     ELSIF OLD.type = 'init' THEN
-      UPDATE classes SET done_lessons = 0 WHERE id = OLD.class_id;
+      UPDATE classes SET done_lessons = GREATEST(0, done_lessons - ABS(OLD.amount)) WHERE id = OLD.class_id;
     END IF;
     RETURN OLD;
   ELSIF TG_OP = 'UPDATE' THEN
@@ -104,12 +104,14 @@ BEGIN
       UPDATE classes SET done_lessons = GREATEST(0, done_lessons - ABS(OLD.amount)) WHERE id = OLD.class_id;
     ELSIF OLD.type = 'top_up' THEN
       UPDATE classes SET total_lessons = GREATEST(0, total_lessons - ABS(OLD.amount)) WHERE id = OLD.class_id;
+    ELSIF OLD.type = 'init' THEN
+      UPDATE classes SET done_lessons = GREATEST(0, done_lessons - ABS(OLD.amount)) WHERE id = OLD.class_id;
     END IF;
     -- Apply new amount
     IF NEW.type = 'check_in' THEN
       UPDATE classes SET done_lessons = done_lessons + ABS(NEW.amount) WHERE id = NEW.class_id;
     ELSIF NEW.type = 'init' THEN
-      UPDATE classes SET done_lessons = ABS(NEW.amount) WHERE id = NEW.class_id;
+      UPDATE classes SET done_lessons = done_lessons + ABS(NEW.amount) WHERE id = NEW.class_id;
     ELSIF NEW.type = 'top_up' THEN
       UPDATE classes SET total_lessons = total_lessons + ABS(NEW.amount) WHERE id = NEW.class_id;
     END IF;
@@ -146,7 +148,8 @@ BEGIN
       INSERT INTO families (invite_code) VALUES (new_invite_code) RETURNING id INTO new_family_id;
       
       -- Link current user
-      INSERT INTO user_profiles (id, family_id, role) VALUES (auth.uid(), new_family_id, 'creator');
+      INSERT INTO user_profiles (id, family_id, role) VALUES (auth.uid(), new_family_id, 'creator')
+      ON CONFLICT (id) DO UPDATE SET family_id = new_family_id, role = 'creator';
       
       RETURN new_family_id;
       
