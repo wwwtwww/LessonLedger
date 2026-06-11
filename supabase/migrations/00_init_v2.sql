@@ -171,10 +171,11 @@ ALTER TABLE logs ENABLE ROW LEVEL SECURITY;
 CREATE OR REPLACE FUNCTION get_current_family_id()
 RETURNS UUID AS $$
   SELECT family_id FROM user_profiles WHERE id = auth.uid() LIMIT 1;
-$$ LANGUAGE sql STABLE;
+$$ LANGUAGE sql SECURITY DEFINER SET search_path = public;
 
 -- Policies for user_profiles
 CREATE POLICY "Users can view their own profile" ON user_profiles FOR SELECT USING (auth.uid() = id);
+-- Note: Insert into user_profiles is handled securely by RPCs, so we don't need a wide-open RLS policy for insert.
 CREATE POLICY "Users can insert their own profile" ON user_profiles FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- Policies for families
@@ -194,3 +195,24 @@ CREATE POLICY "Users can update family classes" ON classes FOR UPDATE USING (fam
 CREATE POLICY "Users can view family logs" ON logs FOR SELECT USING (family_id = get_current_family_id());
 CREATE POLICY "Users can insert family logs" ON logs FOR INSERT WITH CHECK (family_id = get_current_family_id());
 CREATE POLICY "Users can delete family logs" ON logs FOR DELETE USING (family_id = get_current_family_id());
+
+-- 10. Helper to join an existing family
+CREATE OR REPLACE FUNCTION join_family(invite_code_input VARCHAR)
+RETURNS UUID AS $$
+DECLARE
+  target_family_id UUID;
+BEGIN
+  -- Find the family by invite code
+  SELECT id INTO target_family_id FROM families WHERE invite_code = invite_code_input;
+  
+  IF target_family_id IS NULL THEN
+    RAISE EXCEPTION 'Invalid invite code.';
+  END IF;
+  
+  -- Link current user
+  INSERT INTO user_profiles (id, family_id, role) VALUES (auth.uid(), target_family_id, 'member')
+  ON CONFLICT (id) DO UPDATE SET family_id = target_family_id, role = 'member';
+  
+  RETURN target_family_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
