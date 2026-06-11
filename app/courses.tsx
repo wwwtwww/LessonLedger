@@ -33,11 +33,11 @@ export default function CoursesScreen() {
     return true;
   });
 
-  const onSaveClass = async (data: { id?: string; name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: ScheduleEntry[]; unitType: 'lesson' | 'session' }) => {
+  const onSaveClass = (data: { id?: string; name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: ScheduleEntry[]; unitType: 'lesson' | 'session' }) => {
     if (data.id) {
-      await handleUpdateClass(data.id, data);
+      handleUpdateClass(data.id, data);
     } else {
-      await handleAddClass(data);
+      handleAddClass(data);
     }
     setIsAddClassVisible(false);
     setEditingClass(null);
@@ -45,9 +45,6 @@ export default function CoursesScreen() {
 
   const headerRight = (
     <View style={styles.headerRight}>
-      <TouchableOpacity style={styles.iconBtn}>
-        <Feather name="search" size={20} color={COLORS.textPrimary} />
-      </TouchableOpacity>
       <TouchableOpacity style={styles.iconBtn} onPress={() => setIsAddClassVisible(true)}>
         <Feather name="plus" size={24} color={COLORS.textPrimary} />
       </TouchableOpacity>
@@ -154,7 +151,7 @@ export default function CoursesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   scrollView: { flex: 1, width: '100%' },
-  headerWrapper: { height: 64, paddingHorizontal: 4 },
+  headerWrapper: { height: 64, paddingHorizontal: 16 },
   headerRight: { flexDirection: 'row', alignItems: 'center' },
   iconBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
   tabsContainer: { flexDirection: 'row', paddingHorizontal: 20, marginTop: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
