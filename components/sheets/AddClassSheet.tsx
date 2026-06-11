@@ -208,6 +208,16 @@ export default function AddClassSheet({ visible, onClose, onAdd, members, initia
         </View>
       </View>
 
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>{lang === 'zh-CN' ? '每次课时长 (分钟)' : 'Duration (minutes)'}</Text>
+        <TextInput
+          style={styles.input}
+          value={duration.toString()}
+          onChangeText={(text) => setDuration(parseInt(text) || 60)}
+          keyboardType="numeric"
+        />
+      </View>
+
       <View style={styles.row}>
         <View style={[styles.inputGroup, { flex: 1, marginRight: 16 }]}>
           <Text style={styles.label}>{lang === 'zh-CN' ? '总课时' : 'Total Lessons'}</Text>

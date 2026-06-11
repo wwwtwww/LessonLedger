@@ -42,7 +42,7 @@ const ClassCard: React.FC<ClassCardProps> = ({ classItem, owner }) => {
 
       <View style={styles.scheduleRow}>
         <Text style={styles.scheduleText}>
-          🕒 {t.schedule}: {formatSchedule(classItem.schedule, lang as 'zh-CN' | 'en-US')}
+          🕒 {t.schedule}: {formatSchedule(classItem.schedule, lang as 'zh-CN' | 'en-US')}{classItem.duration ? ` (${classItem.duration}${lang === 'zh-CN' ? '分钟' : 'm'})` : ''}
         </Text>
       </View>
 
