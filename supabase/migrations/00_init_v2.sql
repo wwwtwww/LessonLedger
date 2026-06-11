@@ -124,48 +124,38 @@ AFTER INSERT OR UPDATE OR DELETE ON logs
 FOR EACH ROW
 EXECUTE FUNCTION process_class_log();
 
--- 8. Create RPC for unique invite code generation
-CREATE OR REPLACE FUNCTION generate_unique_invite_code()
-RETURNS VARCHAR(6) AS $$
-DECLARE
-  chars TEXT := 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  result VARCHAR(6) := '';
-  i INTEGER := 0;
-  is_unique BOOLEAN := FALSE;
-BEGIN
-  WHILE NOT is_unique LOOP
-    result := '';
-    FOR i IN 1..6 LOOP
-      result := result || substr(chars, floor(random() * length(chars) + 1)::integer, 1);
-    END LOOP;
-    
-    -- Check if it exists
-    PERFORM 1 FROM families WHERE invite_code = result;
-    IF NOT FOUND THEN
-      is_unique := TRUE;
-    END IF;
-  END LOOP;
-  
-  RETURN result;
-END;
-$$ LANGUAGE plpgsql;
-
--- Helper to create a new family and link the current auth user
+-- 8. Helper to create a new family and link the current auth user
 CREATE OR REPLACE FUNCTION create_new_family()
 RETURNS UUID AS $$
 DECLARE
-  new_family_id UUID;
+  chars TEXT := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; -- Removed ambiguous 0, O, 1, I
   new_invite_code VARCHAR(6);
+  new_family_id UUID;
+  i INTEGER := 0;
+  max_retries CONSTANT INTEGER := 10;
 BEGIN
-  -- 1. Generate code
-  new_invite_code := generate_unique_invite_code();
-  
-  -- 2. Create family
-  INSERT INTO families (invite_code) VALUES (new_invite_code) RETURNING id INTO new_family_id;
-  
-  -- 3. Link current user
-  INSERT INTO user_profiles (id, family_id, role) VALUES (auth.uid(), new_family_id, 'creator');
-  
-  RETURN new_family_id;
+  -- Generate code and insert atomically to prevent race conditions
+  FOR attempts IN 1..max_retries LOOP
+    BEGIN
+      new_invite_code := '';
+      FOR i IN 1..6 LOOP
+        new_invite_code := new_invite_code || substr(chars, floor(random() * length(chars) + 1)::integer, 1);
+      END LOOP;
+      
+      -- Attempt atomic insert. Will throw unique_violation if code exists.
+      INSERT INTO families (invite_code) VALUES (new_invite_code) RETURNING id INTO new_family_id;
+      
+      -- Link current user
+      INSERT INTO user_profiles (id, family_id, role) VALUES (auth.uid(), new_family_id, 'creator');
+      
+      RETURN new_family_id;
+      
+    EXCEPTION WHEN unique_violation THEN
+      -- If collision occurs, the loop will retry
+      IF attempts = max_retries THEN
+        RAISE EXCEPTION 'Could not generate a unique invite code after % attempts.', max_retries;
+      END IF;
+    END;
+  END LOOP;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
