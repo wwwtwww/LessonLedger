@@ -67,3 +67,11 @@ CREATE TABLE logs (
   note TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Performance Indexes
+CREATE INDEX idx_user_profiles_family_id ON user_profiles(family_id);
+CREATE INDEX idx_members_family_id ON members(family_id);
+CREATE INDEX idx_classes_family_id ON classes(family_id);
+CREATE INDEX idx_classes_member_id ON classes(member_id);
+CREATE INDEX idx_logs_family_id ON logs(family_id);
+CREATE INDEX idx_logs_class_id ON logs(class_id);
