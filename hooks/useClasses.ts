@@ -110,7 +110,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
     });
 
     // 尝试同步
-    const newClassPayload = { id: classId, ...classItem, doneLessons: 0, isDeleted: false, notificationids: ids };
+    const newClassPayload = { id: classId, ...classItem, doneLessons: 0, isDeleted: false, notificationIds: ids };
     const { error } = await supabase
       .from('classes')
       .insert([newClassPayload]);
@@ -148,7 +148,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
       return updated;
     });
 
-    const updateData: any = { ...data, notificationids: ids };
+    const updateData: any = { ...data, notificationIds: ids };
     delete updateData.id;
     delete updateData.owner;
 
@@ -251,7 +251,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
       // 尝试向云端提交课程和日志
       const { error: updateError } = await supabase
         .from('classes')
-        .update({ doneLessons: nextDoneLessons, notificationids: ids })
+        .update({ doneLessons: nextDoneLessons, notificationIds: ids })
         .eq('id', classId);
 
       if (updateError) {
@@ -259,7 +259,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
         await syncQueue.add({
           table: 'classes',
           type: 'update',
-          payload: { id: classId, doneLessons: nextDoneLessons, notificationids: ids },
+          payload: { id: classId, doneLessons: nextDoneLessons, notificationIds: ids },
         });
         await syncQueue.add({
           table: 'logs',
