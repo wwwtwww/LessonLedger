@@ -94,14 +94,32 @@ BEGIN
       UPDATE classes SET done_lessons = GREATEST(0, done_lessons - ABS(OLD.amount)) WHERE id = OLD.class_id;
     ELSIF OLD.type = 'top_up' THEN
       UPDATE classes SET total_lessons = GREATEST(0, total_lessons - ABS(OLD.amount)) WHERE id = OLD.class_id;
+    ELSIF OLD.type = 'init' THEN
+      UPDATE classes SET done_lessons = 0 WHERE id = OLD.class_id;
     END IF;
     RETURN OLD;
+  ELSIF TG_OP = 'UPDATE' THEN
+    -- Revert old amount
+    IF OLD.type = 'check_in' THEN
+      UPDATE classes SET done_lessons = GREATEST(0, done_lessons - ABS(OLD.amount)) WHERE id = OLD.class_id;
+    ELSIF OLD.type = 'top_up' THEN
+      UPDATE classes SET total_lessons = GREATEST(0, total_lessons - ABS(OLD.amount)) WHERE id = OLD.class_id;
+    END IF;
+    -- Apply new amount
+    IF NEW.type = 'check_in' THEN
+      UPDATE classes SET done_lessons = done_lessons + ABS(NEW.amount) WHERE id = NEW.class_id;
+    ELSIF NEW.type = 'init' THEN
+      UPDATE classes SET done_lessons = ABS(NEW.amount) WHERE id = NEW.class_id;
+    ELSIF NEW.type = 'top_up' THEN
+      UPDATE classes SET total_lessons = total_lessons + ABS(NEW.amount) WHERE id = NEW.class_id;
+    END IF;
+    RETURN NEW;
   END IF;
   RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER log_inserted_or_deleted
-AFTER INSERT OR DELETE ON logs
+AFTER INSERT OR UPDATE OR DELETE ON logs
 FOR EACH ROW
 EXECUTE FUNCTION process_class_log();
