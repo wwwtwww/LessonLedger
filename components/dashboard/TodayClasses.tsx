@@ -11,8 +11,8 @@ interface TodayClassesProps {
   allClasses: ClassItem[];
   members: Member[];
   logs: LogItem[];
-  onCheckIn: (classId: string, className: string, memberName: string) => void;
-  onCheckInWithDate: (classId: string, className: string, memberName: string, dateStr: string) => void;
+  onCheckIn: (classId: string, className: string, memberName: string, onSuccess?: (logId: string, remaining: number) => void) => void;
+  onCheckInWithDate: (classId: string, className: string, memberName: string, dateStr: string, onSuccess?: (logId: string, remaining: number) => void) => void;
   onUndoCheckIn: (logId: string, classId: string) => void;
   onSkipClass: (classId: string, className: string, memberName: string) => void;
   getYesterdayMissedClasses: () => (ClassItem & { memberName: string })[];
@@ -97,31 +97,38 @@ export default function TodayClasses({
   }, [undoInfo]);
 
   // 显示撤销提示条（由 ClassCheckInCard 打卡成功后调用）
-  const showUndoBar = useCallback((classId: string, className: string, remaining: number, unitLabel: string) => {
-    // 查找最新的该课程日志
-    const matchingLogs = logs.filter(l => l.classId === classId);
-    const latestLog = matchingLogs.length > 0 ? matchingLogs[0] : null;
-    setUndoInfo({
-      logId: latestLog?.id || '',
-      classId,
-      message: `✅ 已为${className}打卡 · 剩余 ${Math.max(0, remaining)} ${unitLabel}`,
-    });
-  }, [logs]);
-
   const handleCheckIn = useCallback((classId: string) => {
     const cls = allClasses.find(c => c.id === classId);
     if (!cls) return;
     const member = members.find(m => m.id === cls.memberId);
     const memberName = member?.name || 'Unknown';
-    onCheckIn(classId, cls.name, memberName);
 
-    // 延迟一下等 state 更新，然后显示撤销提示
-    setTimeout(() => {
-      const remaining = cls.totalLessons - cls.doneLessons - 1;
-      const unitLabel = cls.unitType === 'session' ? (t.unitSession === '次' ? '次' : t.unitSession) : (t.unitLesson === '课时' ? '课时' : t.unitLesson);
-      showUndoBar(classId, cls.name, remaining, unitLabel);
-    }, 200);
-  }, [allClasses, members, onCheckIn, showUndoBar, t]);
+    // onSuccess 回调：仅在用户确认打卡后才显示撤销条
+    onCheckIn(classId, cls.name, memberName, (logId: string, remaining: number) => {
+      const unitLabel = cls.unitType === 'session'
+        ? (t.unitSession === '次' ? '次' : t.unitSession)
+        : (t.unitLesson === '课时' ? '课时' : t.unitLesson);
+      setUndoInfo({
+        logId,
+        classId,
+        message: `✅ 已为${cls.name}打卡 · 剩余 ${Math.max(0, remaining)} ${unitLabel}`,
+      });
+    });
+  }, [allClasses, members, onCheckIn, t]);
+
+  // 补打卡成功后显示撤销条（与正常打卡体验一致）
+  const makeMakeupSuccessCallback = useCallback((cls: ClassItem) => {
+    return (logId: string, remaining: number) => {
+      const unitLabel = cls.unitType === 'session'
+        ? (t.unitSession === '次' ? '次' : t.unitSession)
+        : (t.unitLesson === '课时' ? '课时' : t.unitLesson);
+      setUndoInfo({
+        logId,
+        classId: cls.id,
+        message: `✅ 已为${cls.name}打卡 · 剩余 ${Math.max(0, remaining)} ${unitLabel}`,
+      });
+    };
+  }, [t]);
 
   const handleLongPress = useCallback((cls: ClassItem) => {
     const member = members.find(m => m.id === cls.memberId);
@@ -129,14 +136,14 @@ export default function TodayClasses({
 
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = `${yesterday.getMonth() + 1}月${yesterday.getDate()}日`;
+    const yesterdayStr = toLocalDateStr(yesterday);
 
     Alert.alert(
       cls.name,
       '',
       [
         { text: t.makeupCheckIn, onPress: () => {
-          onCheckInWithDate(cls.id, cls.name, memberName, yesterdayStr);
+          onCheckInWithDate(cls.id, cls.name, memberName, yesterdayStr, makeMakeupSuccessCallback(cls));
         }},
         { text: t.skipClass, onPress: () => {
           onSkipClass(cls.id, cls.name, memberName);
@@ -144,14 +151,14 @@ export default function TodayClasses({
         { text: t.cancel, style: 'cancel' },
       ]
     );
-  }, [members, onCheckInWithDate, onSkipClass, t]);
+  }, [members, onCheckInWithDate, onSkipClass, t, makeMakeupSuccessCallback]);
 
   const handleYesterdayCheckIn = useCallback((cls: ClassItem & { memberName: string }) => {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = `${yesterday.getMonth() + 1}月${yesterday.getDate()}日`;
-    onCheckInWithDate(cls.id, cls.name, cls.memberName, yesterdayStr);
-  }, [onCheckInWithDate]);
+    const yesterdayStr = toLocalDateStr(yesterday);
+    onCheckInWithDate(cls.id, cls.name, cls.memberName, yesterdayStr, makeMakeupSuccessCallback(cls));
+  }, [onCheckInWithDate, makeMakeupSuccessCallback]);
 
   const renderCard = (cls: ClassItem, isLongPressable = true) => {
     const member = members.find(m => m.id === cls.memberId);

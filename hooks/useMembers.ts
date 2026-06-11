@@ -54,89 +54,92 @@ export function useMembers() {
 
   const handleAddMember = useCallback(async (name: string, icon: string, themeColor: string) => {
     pendingChanges.current++;
-    const memberId = generateUUID();
-    const newMember: Member = { id: memberId, name, icon, themeColor, isDeleted: false };
+    try {
+      const memberId = generateUUID();
+      const newMember: Member = { id: memberId, name, icon, themeColor, isDeleted: false };
 
-    // 乐观更新
-    setAllMembers(prev => {
-      const updated = [...prev, newMember];
-      storage.setMembers(updated);
-      return updated;
-    });
-
-    // 尝试同步到 Supabase
-    const { error } = await supabase
-      .from('members')
-      .insert([{ id: memberId, name, icon, themeColor, isDeleted: false }]);
-
-    if (error) {
-      log.warn('useMembers', 'Failed to add member, queuing sync', { message: error.message });
-      await syncQueue.add({
-        table: 'members',
-        type: 'insert',
-        payload: { id: memberId, name, icon, themeColor, isDeleted: false },
+      setAllMembers(prev => {
+        const updated = [...prev, newMember];
+        storage.setMembers(updated);
+        return updated;
       });
+
+      const { error } = await supabase
+        .from('members')
+        .insert([{ id: memberId, name, icon, themeColor, isDeleted: false }]);
+
+      if (error) {
+        log.warn('useMembers', 'Failed to add member, queuing sync', { message: error.message });
+        await syncQueue.add({
+          table: 'members',
+          type: 'insert',
+          payload: { id: memberId, name, icon, themeColor, isDeleted: false },
+        });
+      }
+    } finally {
+      pendingChanges.current--;
     }
-    pendingChanges.current--;
   }, []);
 
   const handleUpdateMember = useCallback(async (id: string, data: Partial<Member>) => {
     pendingChanges.current++;
-    const updateData = { ...data };
-    delete updateData.id;
+    try {
+      const updateData = { ...data };
+      delete updateData.id;
 
-    // 乐观更新
-    setAllMembers(prev => {
-      const updated = prev.map(m => m.id === id ? { ...m, ...data } : m);
-      storage.setMembers(updated);
-      return updated;
-    });
-
-    // 尝试同步
-    const { error } = await supabase
-      .from('members')
-      .update(updateData)
-      .eq('id', id);
-
-    if (error) {
-      log.warn('useMembers', 'Failed to update member, queuing sync', { message: error.message });
-      await syncQueue.add({
-        table: 'members',
-        type: 'update',
-        payload: { id, ...updateData },
+      setAllMembers(prev => {
+        const updated = prev.map(m => m.id === id ? { ...m, ...data } : m);
+        storage.setMembers(updated);
+        return updated;
       });
+
+      const { error } = await supabase
+        .from('members')
+        .update(updateData)
+        .eq('id', id);
+
+      if (error) {
+        log.warn('useMembers', 'Failed to update member, queuing sync', { message: error.message });
+        await syncQueue.add({
+          table: 'members',
+          type: 'update',
+          payload: { id, ...updateData },
+        });
+      }
+    } finally {
+      pendingChanges.current--;
     }
-    pendingChanges.current--;
   }, []);
 
   const handleDeleteMember = useCallback(async (id: string) => {
     pendingChanges.current++;
-    // 乐观更新
-    setAllMembers(prev => {
-      const updated = prev.map(m => m.id === id ? { ...m, isDeleted: true } : m);
-      storage.setMembers(updated);
-      return updated;
-    });
-
-    if (id === currentMemberId) {
-      setCurrentMemberId('all');
-    }
-
-    // 尝试同步
-    const { error } = await supabase
-      .from('members')
-      .update({ isDeleted: true })
-      .eq('id', id);
-
-    if (error) {
-      log.warn('useMembers', 'Failed to delete member, queuing sync', { message: error.message });
-      await syncQueue.add({
-        table: 'members',
-        type: 'update',
-        payload: { id, isDeleted: true },
+    try {
+      setAllMembers(prev => {
+        const updated = prev.map(m => m.id === id ? { ...m, isDeleted: true } : m);
+        storage.setMembers(updated);
+        return updated;
       });
+
+      if (id === currentMemberId) {
+        setCurrentMemberId('all');
+      }
+
+      const { error } = await supabase
+        .from('members')
+        .update({ isDeleted: true })
+        .eq('id', id);
+
+      if (error) {
+        log.warn('useMembers', 'Failed to delete member, queuing sync', { message: error.message });
+        await syncQueue.add({
+          table: 'members',
+          type: 'update',
+          payload: { id, isDeleted: true },
+        });
+      }
+    } finally {
+      pendingChanges.current--;
     }
-    pendingChanges.current--;
   }, [currentMemberId]);
 
   const visibleMembers = useMemo(() => allMembers.filter(m => !m.isDeleted), [allMembers]);

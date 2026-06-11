@@ -90,115 +90,120 @@ export function useClasses(currentMemberId: string, members: Member[]) {
 
   const handleAddClass = useCallback(async (classItem: Omit<ClassItem, 'id' | 'doneLessons' | 'isDeleted' | 'owner' | 'notificationIds'> & { initialDoneLessons?: number }) => {
     pendingChanges.current++;
-    log.info('useClasses', 'Adding class', classItem);
-    const classId = generateUUID();
-    const initialDone = classItem.initialDoneLessons || 0;
-
-    const memberName = members.find(m => m.id === classItem.memberId)?.name || '未知';
-    const duration = classItem.duration ?? DEFAULT_CLASS_DURATION;
-    const newClass: ClassItem = { ...classItem, id: classId, doneLessons: initialDone, isDeleted: false, notificationIds: [], duration };
-    let ids: string[] = [];
     try {
-      ids = await scheduleClassReminders(newClass, memberName);
-    } catch (e) {
-      log.warn('useClasses', 'Failed to schedule reminders (non-critical)', e);
-    }
+      log.info('useClasses', 'Adding class', classItem);
+      const classId = generateUUID();
+      const initialDone = classItem.initialDoneLessons || 0;
 
-    const newClassWithReminders = { ...newClass, notificationIds: ids };
+      const memberName = members.find(m => m.id === classItem.memberId)?.name || '未知';
+      const duration = classItem.duration ?? DEFAULT_CLASS_DURATION;
+      const newClass: ClassItem = { ...classItem, id: classId, doneLessons: initialDone, isDeleted: false, notificationIds: [], duration };
+      let ids: string[] = [];
+      try {
+        ids = await scheduleClassReminders(newClass, memberName);
+      } catch (e) {
+        log.warn('useClasses', 'Failed to schedule reminders (non-critical)', e);
+      }
 
-    // 乐观更新
-    setClasses(prev => {
-      const updated = [...prev, newClassWithReminders];
-      storage.setClasses(updated);
-      return updated;
-    });
+      const newClassWithReminders = { ...newClass, notificationIds: ids };
 
-    // 尝试同步
-    const newClassPayload = { ...newClassWithReminders };
-    const { error } = await supabase
-      .from('classes')
-      .insert([newClassPayload]);
-
-    if (error) {
-      log.warn('useClasses', 'Failed to add class online, queuing sync', { message: error.message });
-      await syncQueue.add({
-        table: 'classes',
-        type: 'insert',
-        payload: newClassPayload,
+      setClasses(prev => {
+        const updated = [...prev, newClassWithReminders];
+        storage.setClasses(updated);
+        return updated;
       });
+
+      const newClassPayload = { ...newClassWithReminders };
+      const { error } = await supabase
+        .from('classes')
+        .insert([newClassPayload]);
+
+      if (error) {
+        log.warn('useClasses', 'Failed to add class online, queuing sync', { message: error.message });
+        await syncQueue.add({
+          table: 'classes',
+          type: 'insert',
+          payload: newClassPayload,
+        });
+      }
+    } finally {
+      pendingChanges.current--;
     }
-    pendingChanges.current--;
   }, [members]);
 
   const handleUpdateClass = useCallback(async (id: string, data: Partial<ClassItem>) => {
     pendingChanges.current++;
-    log.info('useClasses', 'Updating class', { id, data });
-    const oldClass = classes.find(c => c.id === id);
-
-    let ids: string[] = [];
     try {
-      await cancelReminders(oldClass?.notificationIds);
-      const memberName = members.find(m => m.id === (data.memberId || oldClass?.memberId))?.name || '未知';
-      const updatedClass = { ...oldClass, ...data } as ClassItem;
-      ids = await scheduleClassReminders(updatedClass, memberName);
-    } catch (e) {
-      log.warn('useClasses', 'Failed to update reminders (non-critical)', e);
-    }
+      log.info('useClasses', 'Updating class', { id, data });
+      const oldClass = classes.find(c => c.id === id);
 
-    // 乐观更新
-    setClasses(prev => {
-      const updated = prev.map(c => c.id === id ? { ...c, ...data, notificationIds: ids } : c);
-      storage.setClasses(updated);
-      return updated;
-    });
+      let ids: string[] = [];
+      try {
+        await cancelReminders(oldClass?.notificationIds);
+        const memberName = members.find(m => m.id === (data.memberId || oldClass?.memberId))?.name || '未知';
+        const updatedClass = { ...oldClass, ...data } as ClassItem;
+        ids = await scheduleClassReminders(updatedClass, memberName);
+      } catch (e) {
+        log.warn('useClasses', 'Failed to update reminders (non-critical)', e);
+      }
 
-    const updateData: any = { ...data, notificationIds: ids };
-    delete updateData.id;
-    delete updateData.owner;
-
-    const { error } = await supabase
-      .from('classes')
-      .update(updateData)
-      .eq('id', id);
-
-    if (error) {
-      log.warn('useClasses', 'Failed to update class online, queuing sync', { message: error.message });
-      await syncQueue.add({
-        table: 'classes',
-        type: 'update',
-        payload: { id, ...updateData },
+      setClasses(prev => {
+        const updated = prev.map(c => c.id === id ? { ...c, ...data, notificationIds: ids } : c);
+        storage.setClasses(updated);
+        return updated;
       });
+
+      const updateData: any = { ...data, notificationIds: ids };
+      delete updateData.id;
+      delete updateData.owner;
+
+      const { error } = await supabase
+        .from('classes')
+        .update(updateData)
+        .eq('id', id);
+
+      if (error) {
+        log.warn('useClasses', 'Failed to update class online, queuing sync', { message: error.message });
+        await syncQueue.add({
+          table: 'classes',
+          type: 'update',
+          payload: { id, ...updateData },
+        });
+      }
+    } finally {
+      pendingChanges.current--;
     }
-    pendingChanges.current--;
   }, [classes, members]);
 
   const handleDeleteClass = useCallback(async (id: string) => {
     pendingChanges.current++;
-    log.info('useClasses', 'Deleting class', { id });
-    const oldClass = classes.find(c => c.id === id);
-    try { await cancelReminders(oldClass?.notificationIds); } catch {}
+    try {
+      log.info('useClasses', 'Deleting class', { id });
+      const oldClass = classes.find(c => c.id === id);
+      try { await cancelReminders(oldClass?.notificationIds); } catch {}
 
-    // 乐观更新
-    setClasses(prev => {
-      const updated = prev.map(c => c.id === id ? { ...c, isDeleted: true } : c);
-      storage.setClasses(updated);
-      return updated;
-    });
-
-    const { error } = await supabase
-      .from('classes')
-      .update({ isDeleted: true })
-      .eq('id', id);
-
-    if (error) {
-      log.warn('useClasses', 'Failed to delete class online, queuing sync', { message: error.message });
-      await syncQueue.add({
-        table: 'classes',
-        type: 'update',
-        payload: { id, isDeleted: true },
+      setClasses(prev => {
+        const updated = prev.map(c => c.id === id ? { ...c, isDeleted: true } : c);
+        storage.setClasses(updated);
+        return updated;
       });
+
+      const { error } = await supabase
+        .from('classes')
+        .update({ isDeleted: true })
+        .eq('id', id);
+
+      if (error) {
+        log.warn('useClasses', 'Failed to delete class online, queuing sync', { message: error.message });
+        await syncQueue.add({
+          table: 'classes',
+          type: 'update',
+          payload: { id, isDeleted: true },
+        });
+      }
+    } finally {
+      pendingChanges.current--;
     }
-    pendingChanges.current--;
   }, [classes]);
 
   const stats = useMemo(() => {
@@ -210,80 +215,86 @@ export function useClasses(currentMemberId: string, members: Member[]) {
     return { totalSpent, totalClasses, totalRemaining };
   }, [classes, members]);
 
-  const handleCheckIn = useCallback((classId: string, className: string, memberName: string) => {
+  const handleCheckIn = useCallback((classId: string, className: string, memberName: string, onSuccess?: (logId: string, remaining: number) => void) => {
     const performAction = async () => {
-      const item = classes.find(c => c.id === classId);
-      if (!item || item.isDeleted) return;
+      pendingChanges.current++;
+      try {
+        const item = classes.find(c => c.id === classId);
+        if (!item || item.isDeleted) return;
 
-      if (item.doneLessons >= item.totalLessons) {
-        const errorMsg = t.noRemainingError;
-        if (Platform.OS === 'web') alert(errorMsg);
-        else Alert.alert('', errorMsg);
-        return;
-      }
+        if (item.doneLessons >= item.totalLessons) {
+          const errorMsg = t.noRemainingError;
+          if (Platform.OS === 'web') alert(errorMsg);
+          else Alert.alert('', errorMsg);
+          return;
+        }
 
-      try { await cancelReminders(item.notificationIds); } catch {}
+        try { await cancelReminders(item.notificationIds); } catch {}
 
-      const nextDoneLessons = item.doneLessons + 1;
-      const logMessage = `[${memberName}] ${className} -> -1 ${item.unitType === 'lesson' ? t.unitLesson : t.unitSession}`;
+        const nextDoneLessons = item.doneLessons + 1;
+        const remaining = item.totalLessons - nextDoneLessons;
+        const logMessage = `[${memberName}] ${className} -> -1 ${item.unitType === 'lesson' ? t.unitLesson : t.unitSession}`;
 
-      const updatedClass = { ...item, doneLessons: nextDoneLessons };
-      let ids: string[] = [];
-      try { ids = await scheduleClassReminders(updatedClass, memberName); } catch {}
+        const updatedClass = { ...item, doneLessons: nextDoneLessons };
+        let ids: string[] = [];
+        try { ids = await scheduleClassReminders(updatedClass, memberName); } catch {}
 
-      // 乐观更新课程与日志状态
-      const logId = generateUUID();
-      const newLog: LogItem = {
-        id: logId,
-        time: new Date().toLocaleString(),
-        text: logMessage,
-        classId: classId,
-      };
+        const logId = generateUUID();
+        const newLog: LogItem = {
+          id: logId,
+          time: new Date().toLocaleString(),
+          text: logMessage,
+          classId: classId,
+        };
 
-      setClasses(prev => {
-        const updated = prev.map(c => c.id === classId ? { ...c, doneLessons: nextDoneLessons, notificationIds: ids } : c);
-        storage.setClasses(updated);
-        return updated;
-      });
-
-      setLogs(prev => {
-        const updated = [newLog, ...prev];
-        storage.setLogs(updated);
-        return updated;
-      });
-
-      // 尝试向云端提交课程和日志
-      const { error: updateError } = await supabase
-        .from('classes')
-        .update({ doneLessons: nextDoneLessons, notificationIds: ids })
-        .eq('id', classId);
-
-      if (updateError) {
-        log.warn('useClasses', 'Failed to update check-in online, queueing sync', updateError);
-        await syncQueue.add({
-          table: 'classes',
-          type: 'update',
-          payload: { id: classId, doneLessons: nextDoneLessons, notificationIds: ids },
+        setClasses(prev => {
+          const updated = prev.map(c => c.id === classId ? { ...c, doneLessons: nextDoneLessons, notificationIds: ids } : c);
+          storage.setClasses(updated);
+          return updated;
         });
-        await syncQueue.add({
-          table: 'logs',
-          type: 'insert',
-          payload: { id: logId, text: logMessage, class_id: classId },
-        });
-        return;
-      }
 
-      const { error: logError } = await supabase
-        .from('logs')
-        .insert([{ id: logId, text: logMessage, class_id: classId }]);
-
-      if (logError) {
-        log.warn('useClasses', 'Failed to insert log online, queueing sync', logError);
-        await syncQueue.add({
-          table: 'logs',
-          type: 'insert',
-          payload: { id: logId, text: logMessage, class_id: classId },
+        setLogs(prev => {
+          const updated = [newLog, ...prev];
+          storage.setLogs(updated);
+          return updated;
         });
+
+        onSuccess?.(logId, remaining);
+
+        const { error: updateError } = await supabase
+          .from('classes')
+          .update({ doneLessons: nextDoneLessons, notificationIds: ids })
+          .eq('id', classId);
+
+        if (updateError) {
+          log.warn('useClasses', 'Failed to update check-in online, queueing sync', updateError);
+          await syncQueue.add({
+            table: 'classes',
+            type: 'update',
+            payload: { id: classId, doneLessons: nextDoneLessons, notificationIds: ids },
+          });
+          await syncQueue.add({
+            table: 'logs',
+            type: 'insert',
+            payload: { id: logId, text: logMessage, class_id: classId },
+          });
+          return;
+        }
+
+        const { error: logError } = await supabase
+          .from('logs')
+          .insert([{ id: logId, text: logMessage, class_id: classId }]);
+
+        if (logError) {
+          log.warn('useClasses', 'Failed to insert log online, queueing sync', logError);
+          await syncQueue.add({
+            table: 'logs',
+            type: 'insert',
+            payload: { id: logId, text: logMessage, class_id: classId },
+          });
+        }
+      } finally {
+        pendingChanges.current--;
       }
     };
 
@@ -299,12 +310,14 @@ export function useClasses(currentMemberId: string, members: Member[]) {
   }, [classes, t]);
 
   // 带日期的打卡（补打卡）
-  const handleCheckInWithDate = useCallback((classId: string, className: string, memberName: string, dateStr: string) => {
+  const handleCheckInWithDate = useCallback((classId: string, className: string, memberName: string, dateStr: string, onSuccess?: (logId: string, remaining: number) => void) => {
     const performAction = async () => {
-      const item = classes.find(c => c.id === classId);
-      if (!item || item.isDeleted) return;
+      pendingChanges.current++;
+      try {
+        const item = classes.find(c => c.id === classId);
+        if (!item || item.isDeleted) return;
 
-      if (item.doneLessons >= item.totalLessons) {
+        if (item.doneLessons >= item.totalLessons) {
         const errorMsg = t.noRemainingError;
         if (Platform.OS === 'web') alert(errorMsg);
         else Alert.alert('', errorMsg);
@@ -340,6 +353,8 @@ export function useClasses(currentMemberId: string, members: Member[]) {
         return updated;
       });
 
+      onSuccess?.(logId, item.totalLessons - nextDoneLessons);
+
       const { error: updateError } = await supabase
         .from('classes')
         .update({ doneLessons: nextDoneLessons, notificationIds: ids })
@@ -362,19 +377,24 @@ export function useClasses(currentMemberId: string, members: Member[]) {
 
       const { error: logError } = await supabase
         .from('logs')
-        .insert([{ id: logId, text: logMessage, class_id: classId }]);
+        .insert([{ id: logId, text: logMessage, class_id: classId, created_at: dateStr }]);
 
       if (logError) {
         log.warn('useClasses', 'Failed to insert log online, queueing sync', logError);
         await syncQueue.add({
           table: 'logs',
           type: 'insert',
-          payload: { id: logId, text: logMessage, class_id: classId },
+          payload: { id: logId, text: logMessage, class_id: classId, created_at: dateStr },
         });
+      }
+      } finally {
+        pendingChanges.current--;
       }
     };
 
-    const msg = t.makeupCheckInMsg.replace('{date}', dateStr).replace('{course}', className);
+    // 将 YYYY-MM-DD 转为用户友好的中文日期显示
+    const displayDate = dateStr.replace(/^\d{4}-/, '').replace('-', '月') + '日';
+    const msg = t.makeupCheckInMsg.replace('{date}', displayDate).replace('{course}', className);
     if (Platform.OS === 'web') {
       if (window.confirm(msg)) performAction();
     } else {
@@ -387,8 +407,10 @@ export function useClasses(currentMemberId: string, members: Member[]) {
 
   // 撤销打卡
   const handleUndoCheckIn = useCallback(async (logId: string, classId: string) => {
-    const item = classes.find(c => c.id === classId);
-    if (!item) return;
+    pendingChanges.current++;
+    try {
+      const item = classes.find(c => c.id === classId);
+      if (!item) return;
 
     const prevDoneLessons = Math.max(0, item.doneLessons - 1);
     const memberName = members.find(m => m.id === item.memberId)?.name || '未知';
@@ -433,11 +455,16 @@ export function useClasses(currentMemberId: string, members: Member[]) {
     if (deleteError) {
       log.warn('useClasses', 'Failed to delete log online, queueing sync', deleteError);
     }
+    } finally {
+      pendingChanges.current--;
+    }
   }, [classes, members]);
 
   // 请假
   const handleSkipClass = useCallback(async (classId: string, className: string, memberName: string) => {
-    const logId = generateUUID();
+    pendingChanges.current++;
+    try {
+      const logId = generateUUID();
     const skipLog: LogItem = {
       id: logId,
       time: new Date().toLocaleString(),
@@ -462,6 +489,9 @@ export function useClasses(currentMemberId: string, members: Member[]) {
         type: 'insert',
         payload: { id: logId, text: skipLog.text, class_id: classId },
       });
+    }
+    } finally {
+      pendingChanges.current--;
     }
   }, []);
 
