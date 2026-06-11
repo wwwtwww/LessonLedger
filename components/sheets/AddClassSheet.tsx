@@ -14,13 +14,13 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { Member, ClassItem, ScheduleEntry } from '../../types';
 import SchedulePicker from '../ui/SchedulePicker';
 import { Feather } from '@expo/vector-icons';
-import { COLORS } from '../../utils/colors';
+import { COLORS, DEFAULT_CLASS_DURATION } from '../../utils/colors';
 import { hasScheduleConflict } from '../../utils/scheduleConflict';
 
 interface AddClassSheetProps {
   visible: boolean;
   onClose: () => void;
-  onAdd: (data: Partial<ClassItem> & { name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: ScheduleEntry[]; unitType: 'lesson' | 'session'; duration?: number }) => void;
+  onAdd: (data: Partial<ClassItem> & { name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: ScheduleEntry[]; unitType: 'lesson' | 'session'; duration?: number; initialDoneLessons?: number }) => void;
   members: Member[];
   initialData?: ClassItem | null;
   classes?: ClassItem[];
@@ -35,8 +35,9 @@ export default function AddClassSheet({ visible, onClose, onAdd, members, initia
   const [totalLessons, setTotalLessons] = useState('');
   const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
   const [unitType, setUnitType] = useState<'lesson' | 'session'>('lesson');
-  const [duration, setDuration] = useState<number>(60);
+  const [duration, setDuration] = useState<number>(DEFAULT_CLASS_DURATION);
   const [error, setError] = useState('');
+  const [initialDone, setInitialDone] = useState('');
   const [showMemberPicker, setShowMemberPicker] = useState(false);
   const prevVisible = useRef(visible);
 
@@ -63,13 +64,14 @@ export default function AddClassSheet({ visible, onClose, onAdd, members, initia
   useEffect(() => {
     if (visible && !prevVisible.current) {
       setStep(1);
+      setInitialDone('');
       if (initialData) {
         setName(initialData.name);
         setMemberId(initialData.memberId);
         setTotalPrice(initialData.totalPrice.toString());
         setTotalLessons(initialData.totalLessons.toString());
         setUnitType(initialData.unitType || 'lesson');
-        setDuration(initialData.duration || 60);
+        setDuration(initialData.duration || DEFAULT_CLASS_DURATION);
         
         let parsedSchedule: ScheduleEntry[] = [];
         if (typeof initialData.schedule === 'string') {
@@ -116,9 +118,12 @@ export default function AddClassSheet({ visible, onClose, onAdd, members, initia
       const { conflict, conflictingClass } = hasScheduleConflict(schedule, duration, existingMemberClasses);
 
       if (conflict) {
-        const msg = `冲突提示：该时间段与 [${conflictingClass}] 的上课时间重合，请修改时间后重试。`;
+        const msg = (lang === 'zh-CN'
+          ? `该时间段与 [${conflictingClass}] 的上课时间重合，请修改后重试。`
+          : `Time conflict with [${conflictingClass}]. Please adjust and try again.`);
+        const title = lang === 'zh-CN' ? '时间冲突' : 'Schedule Conflict';
         if (Platform.OS === 'web') alert(msg);
-        else Alert.alert('时间冲突', msg);
+        else Alert.alert(title, msg);
         return;
       }
     }
@@ -132,6 +137,7 @@ export default function AddClassSheet({ visible, onClose, onAdd, members, initia
       schedule,
       unitType,
       duration,
+      initialDoneLessons: parseInt(initialDone) || 0,
     });
   };
 
@@ -239,6 +245,17 @@ export default function AddClassSheet({ visible, onClose, onAdd, members, initia
             placeholder="0"
           />
         </View>
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>{lang === 'zh-CN' ? '已消耗课时（已上过的课，默认0）' : 'Done Lessons (default 0)'}</Text>
+        <TextInput
+          style={styles.input}
+          value={initialDone}
+          onChangeText={text => setInitialDone(text.replace(/[^0-9]/g, ''))}
+          keyboardType="numeric"
+          placeholder="0"
+        />
       </View>
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}

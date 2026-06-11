@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
 import { ClassItem, LogItem, Member } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../utils/supabase';
@@ -8,6 +8,8 @@ import { log } from '../utils/logger';
 import { scheduleClassReminders, cancelReminders } from '../utils/notifications';
 import { syncQueue } from '../utils/syncQueue';
 import { generateUUID } from '../utils/uuid';
+import { toLocalDateStr } from '../utils/formatters';
+import { DEFAULT_CLASS_DURATION } from '../utils/colors';
 
 export function useClasses(currentMemberId: string, members: Member[]) {
   const { t } = useLanguage();
@@ -86,14 +88,15 @@ export function useClasses(currentMemberId: string, members: Member[]) {
     }));
   }, [classes, currentMemberId, members]);
 
-  const handleAddClass = useCallback(async (classItem: Omit<ClassItem, 'id' | 'doneLessons' | 'isDeleted' | 'owner' | 'notificationIds'>) => {
+  const handleAddClass = useCallback(async (classItem: Omit<ClassItem, 'id' | 'doneLessons' | 'isDeleted' | 'owner' | 'notificationIds'> & { initialDoneLessons?: number }) => {
     pendingChanges.current++;
     log.info('useClasses', 'Adding class', classItem);
     const classId = generateUUID();
+    const initialDone = classItem.initialDoneLessons || 0;
 
     const memberName = members.find(m => m.id === classItem.memberId)?.name || '未知';
-    const duration = classItem.duration ?? 60;
-    const newClass: ClassItem = { ...classItem, id: classId, doneLessons: 0, isDeleted: false, notificationIds: [], duration };
+    const duration = classItem.duration ?? DEFAULT_CLASS_DURATION;
+    const newClass: ClassItem = { ...classItem, id: classId, doneLessons: initialDone, isDeleted: false, notificationIds: [], duration };
     let ids: string[] = [];
     try {
       ids = await scheduleClassReminders(newClass, memberName);
@@ -215,7 +218,7 @@ export function useClasses(currentMemberId: string, members: Member[]) {
       if (item.doneLessons >= item.totalLessons) {
         const errorMsg = t.noRemainingError;
         if (Platform.OS === 'web') alert(errorMsg);
-        else alert(errorMsg); // Use standard alert on all platforms for offline consistency
+        else Alert.alert('', errorMsg);
         return;
       }
 
@@ -288,10 +291,211 @@ export function useClasses(currentMemberId: string, members: Member[]) {
     if (Platform.OS === 'web') {
       if (window.confirm(msg)) performAction();
     } else {
-      // Direct Web confirmation or simple Native alert wrapper
-      if (window.confirm(msg)) performAction();
+      Alert.alert(t.confirmTitle, msg, [
+        { text: t.cancel, style: 'cancel' },
+        { text: t.confirm, onPress: performAction }
+      ]);
     }
   }, [classes, t]);
+
+  // 带日期的打卡（补打卡）
+  const handleCheckInWithDate = useCallback((classId: string, className: string, memberName: string, dateStr: string) => {
+    const performAction = async () => {
+      const item = classes.find(c => c.id === classId);
+      if (!item || item.isDeleted) return;
+
+      if (item.doneLessons >= item.totalLessons) {
+        const errorMsg = t.noRemainingError;
+        if (Platform.OS === 'web') alert(errorMsg);
+        else Alert.alert('', errorMsg);
+        return;
+      }
+
+      try { await cancelReminders(item.notificationIds); } catch {}
+
+      const nextDoneLessons = item.doneLessons + 1;
+      const logMessage = `[${memberName}] ${className} -> -1 ${item.unitType === 'lesson' ? t.unitLesson : t.unitSession}`;
+
+      const updatedClass = { ...item, doneLessons: nextDoneLessons };
+      let ids: string[] = [];
+      try { ids = await scheduleClassReminders(updatedClass, memberName); } catch {}
+
+      const logId = generateUUID();
+      const newLog: LogItem = {
+        id: logId,
+        time: dateStr + ' ' + new Date().toLocaleTimeString(),
+        text: logMessage,
+        classId: classId,
+      };
+
+      setClasses(prev => {
+        const updated = prev.map(c => c.id === classId ? { ...c, doneLessons: nextDoneLessons, notificationIds: ids } : c);
+        storage.setClasses(updated);
+        return updated;
+      });
+
+      setLogs(prev => {
+        const updated = [newLog, ...prev];
+        storage.setLogs(updated);
+        return updated;
+      });
+
+      const { error: updateError } = await supabase
+        .from('classes')
+        .update({ doneLessons: nextDoneLessons, notificationIds: ids })
+        .eq('id', classId);
+
+      if (updateError) {
+        log.warn('useClasses', 'Failed to update check-in online, queueing sync', updateError);
+        await syncQueue.add({
+          table: 'classes',
+          type: 'update',
+          payload: { id: classId, doneLessons: nextDoneLessons, notificationIds: ids },
+        });
+        await syncQueue.add({
+          table: 'logs',
+          type: 'insert',
+          payload: { id: logId, text: logMessage, class_id: classId, created_at: dateStr },
+        });
+        return;
+      }
+
+      const { error: logError } = await supabase
+        .from('logs')
+        .insert([{ id: logId, text: logMessage, class_id: classId }]);
+
+      if (logError) {
+        log.warn('useClasses', 'Failed to insert log online, queueing sync', logError);
+        await syncQueue.add({
+          table: 'logs',
+          type: 'insert',
+          payload: { id: logId, text: logMessage, class_id: classId },
+        });
+      }
+    };
+
+    const msg = t.makeupCheckInMsg.replace('{date}', dateStr).replace('{course}', className);
+    if (Platform.OS === 'web') {
+      if (window.confirm(msg)) performAction();
+    } else {
+      Alert.alert(t.makeupCheckInTitle, msg, [
+        { text: t.cancel, style: 'cancel' },
+        { text: t.confirm, onPress: performAction }
+      ]);
+    }
+  }, [classes, t]);
+
+  // 撤销打卡
+  const handleUndoCheckIn = useCallback(async (logId: string, classId: string) => {
+    const item = classes.find(c => c.id === classId);
+    if (!item) return;
+
+    const prevDoneLessons = Math.max(0, item.doneLessons - 1);
+    const memberName = members.find(m => m.id === item.memberId)?.name || '未知';
+
+    // 恢复通知
+    const updatedClass = { ...item, doneLessons: prevDoneLessons };
+    let ids: string[] = [];
+    try { ids = await scheduleClassReminders(updatedClass, memberName); } catch {}
+
+    // 乐观更新
+    setClasses(prev => {
+      const updated = prev.map(c => c.id === classId ? { ...c, doneLessons: prevDoneLessons, notificationIds: ids } : c);
+      storage.setClasses(updated);
+      return updated;
+    });
+
+    setLogs(prev => {
+      const updated = prev.filter(l => l.id !== logId);
+      storage.setLogs(updated);
+      return updated;
+    });
+
+    // 云端同步
+    const { error: updateError } = await supabase
+      .from('classes')
+      .update({ doneLessons: prevDoneLessons, notificationIds: ids })
+      .eq('id', classId);
+
+    if (updateError) {
+      await syncQueue.add({
+        table: 'classes',
+        type: 'update',
+        payload: { id: classId, doneLessons: prevDoneLessons, notificationIds: ids },
+      });
+    }
+
+    const { error: deleteError } = await supabase
+      .from('logs')
+      .delete()
+      .eq('id', logId);
+
+    if (deleteError) {
+      log.warn('useClasses', 'Failed to delete log online, queueing sync', deleteError);
+    }
+  }, [classes, members]);
+
+  // 请假
+  const handleSkipClass = useCallback(async (classId: string, className: string, memberName: string) => {
+    const logId = generateUUID();
+    const skipLog: LogItem = {
+      id: logId,
+      time: new Date().toLocaleString(),
+      text: `[请假] ${memberName} ${className}`,
+      classId: classId,
+    };
+
+    setLogs(prev => {
+      const updated = [skipLog, ...prev];
+      storage.setLogs(updated);
+      return updated;
+    });
+
+    const { error } = await supabase
+      .from('logs')
+      .insert([{ id: logId, text: skipLog.text, class_id: classId }]);
+
+    if (error) {
+      log.warn('useClasses', 'Failed to insert skip log online, queueing sync', error);
+      await syncQueue.add({
+        table: 'logs',
+        type: 'insert',
+        payload: { id: logId, text: skipLog.text, class_id: classId },
+      });
+    }
+  }, []);
+
+  // 获取昨日未打卡课程列表
+  const getYesterdayMissedClasses = useCallback(() => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayDay = yesterday.getDay();
+    const yesterdayDateStr = toLocalDateStr(yesterday);
+    const yesterdayLocaleStr = yesterday.toLocaleDateString();
+
+    return classes.filter(c => {
+      if (c.isDeleted) return false;
+      if (c.doneLessons >= c.totalLessons) return false;
+      if (!c.schedule || c.schedule.length === 0) return false;
+
+      const isScheduled = c.schedule.some(s =>
+        (s.type === 'weekly' && s.day === yesterdayDay) ||
+        (s.type === 'specific' && s.date === yesterdayDateStr)
+      );
+      if (!isScheduled) return false;
+
+      const hasLog = logs.some(l => {
+        if (l.classId !== c.id) return false;
+        const logDate = new Date(l.time).toLocaleDateString();
+        return logDate === yesterdayLocaleStr;
+      });
+
+      return !hasLog;
+    }).map(c => ({
+      ...c,
+      memberName: members.find(m => m.id === c.memberId)?.name || 'Unknown',
+    }));
+  }, [classes, logs, members]);
 
   return {
     classes,
@@ -299,6 +503,10 @@ export function useClasses(currentMemberId: string, members: Member[]) {
     logs,
     stats,
     handleCheckIn,
+    handleCheckInWithDate,
+    handleUndoCheckIn,
+    handleSkipClass,
+    getYesterdayMissedClasses,
     handleAddClass,
     handleUpdateClass,
     handleDeleteClass,

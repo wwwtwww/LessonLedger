@@ -96,7 +96,16 @@ const i18n = {
     viewAllCourses: '查看全部课程',
     addFirstClass: '添加第一门课程',
     viewAllLogs: '查看全部打卡日志',
-    addFirstMember: '添加第一个家庭成员'
+    addFirstMember: '添加第一个家庭成员',
+    scheduleConflictTitle: '时间冲突',
+    scheduleConflictMsg: '该时间段与 [{class}] 的上课时间重合，请修改后重试。',
+    undo: '撤销',
+    yesterdayMissed: '昨日未打卡',
+    makeupCheckIn: '补打卡',
+    makeupCheckInTitle: '补打卡',
+    makeupCheckInMsg: '确认在 {date} 为 {course} 补打卡？',
+    skipClass: '请假',
+    dismiss: '忽略',
   },
   'en-US': {
     title: '🎒 LessonLedger',
@@ -192,7 +201,16 @@ const i18n = {
     viewAllCourses: 'View All Courses',
     addFirstClass: 'Add Your First Class',
     viewAllLogs: 'View All Logs',
-    addFirstMember: 'Add First Member'
+    addFirstMember: 'Add First Member',
+    scheduleConflictTitle: 'Schedule Conflict',
+    scheduleConflictMsg: 'Time conflict with [{class}]. Please adjust and try again.',
+    undo: 'Undo',
+    yesterdayMissed: 'Missed Yesterday',
+    makeupCheckIn: 'Check In',
+    makeupCheckInTitle: 'Makeup Check-In',
+    makeupCheckInMsg: 'Confirm makeup check-in for {course} on {date}?',
+    skipClass: 'Skip',
+    dismiss: 'Dismiss',
   }
 };
 

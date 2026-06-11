@@ -1,0 +1,111 @@
+<h2>打卡路径重构 — 三种方案对比</h2>
+<p class="subtitle">核心目标：打开 App 后 1 步完成打卡（当前需要 3-4 步）</p>
+
+<div class="section">
+  <h3>📱 当前状态：Dashboard 只展示预警课程（≤3课时）的打卡入口</h3>
+  <div style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap;">
+    <div class="mockup" style="width:280px;">
+      <div class="mockup-header">当前仪表盘 Dashboard</div>
+      <div class="mockup-body" style="padding:16px; font-size:12px;">
+        <div style="font-weight:600;margin-bottom:8px;">📊 仪表盘</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <div style="flex:1;background:#EEF2FF;border-radius:12px;padding:10px;text-align:center;"><div style="font-size:10px;color:#666;">总支出</div><div style="font-weight:700;">¥8,800</div></div>
+          <div style="flex:1;background:#EEF2FF;border-radius:12px;padding:10px;text-align:center;"><div style="font-size:10px;color:#666;">总消耗</div><div style="font-weight:700;">24课时</div></div>
+          <div style="flex:1;background:#EEF2FF;border-radius:12px;padding:10px;text-align:center;"><div style="font-size:10px;color:#666;">剩余</div><div style="font-weight:700;">36课时</div></div>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:12px;">
+          <div class="placeholder" style="width:36px;height:36px;border-radius:18px;">👦</div>
+          <div class="placeholder" style="width:36px;height:36px;border-radius:18px;">👧</div>
+        </div>
+        <div style="font-size:11px;font-weight:600;margin-bottom:6px;">⚠️ 预警课程 (剩余 < 3)</div>
+        <div style="background:white;border-radius:12px;padding:10px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+          <div><div style="font-weight:600;">🎹 钢琴</div><div style="font-size:10px;color:#999;">小明</div></div>
+          <div style="text-align:right;"><div style="font-size:10px;color:#EF4444;">剩余 2</div><div style="background:#EF4444;color:white;padding:3px 10px;border-radius:10px;font-size:10px;">打卡</div></div>
+        </div>
+        <div style="background:white;border-radius:12px;padding:10px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+          <div><div style="font-weight:600;">🎨 美术</div><div style="font-size:10px;color:#999;">小红</div></div>
+          <div style="text-align:right;"><div style="font-size:10px;color:#EF4444;">剩余 1</div><div style="background:#EF4444;color:white;padding:3px 10px;border-radius:10px;font-size:10px;">打卡</div></div>
+        </div>
+        <div style="font-size:10px;color:#94A3B8;">
+          ❌ <b>钢琴（剩余12）</b>和<b>足球（剩余8）</b>不在预警区 → 必须去课程页
+        </div>
+      </div>
+    </div>
+    <div style="width:240px;font-size:13px;color:#64748B;">
+      <p><b>问题</b>：Dashboard 只有 <b style="color:#EF4444;">剩余≤3的预警课程</b>才显示打卡按钮。</p>
+      <p>正常课程（如钢琴剩12节） → 必须 <b>打开Drawer → 点课程 → 找到课程 → 点打卡</b>，共 <b style="color:#EF4444;">3-4 步</b>。</p>
+      <p>用户70%的打卡是<b>固定排期的日常课</b>，每次都走这个长路径。</p>
+    </div>
+  </div>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>方案A：「今日课程」Dashboard 重构（推荐⭐）</h3>
+      <p>Dashboard 核心区域改为<b>今日排期课程</b>，根据 Schedule 自动匹配。每门今日课独立卡片+大打卡按钮。临时课程通过底部「全部课程」入口补充。</p>
+      <div class="mockup" style="width:280px;margin-top:12px;">
+        <div class="mockup-header">新 Dashboard 布局</div>
+        <div class="mockup-body" style="padding:16px;font-size:12px;">
+          <div style="font-weight:600;margin-bottom:4px;">📊 6月10日 周三</div>
+          <div style="font-size:10px;color:#999;margin-bottom:10px;">今日 3 门课程</div>
+          <div style="background:#EEF2FF;border-radius:14px;padding:12px;margin-bottom:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div style="display:flex;align-items:center;gap:8px;"><span>👦</span><div><div style="font-weight:600;">🎹 钢琴</div><div style="font-size:10px;color:#666;">小明 · 剩余 12</div></div></div>
+              <div style="background:#6366F1;color:white;padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600;">打卡</div>
+            </div>
+          </div>
+          <div style="background:#EEF2FF;border-radius:14px;padding:12px;margin-bottom:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div style="display:flex;align-items:center;gap:8px;"><span>👧</span><div><div style="font-weight:600;">📐 数学</div><div style="font-size:10px;color:#666;">小红 · 剩余 5</div></div></div>
+              <div style="background:#6366F1;color:white;padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600;">打卡</div>
+            </div>
+          </div>
+          <div style="background:#FEF2F2;border-radius:14px;padding:12px;margin-bottom:8px;border:1px solid #FECACA;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div style="display:flex;align-items:center;gap:8px;"><span>👦</span><div><div style="font-weight:600;">🎨 美术</div><div style="font-size:10px;color:#666;">小明 · <span style="color:#EF4444;">剩余 1 ⚠️</span></div></div></div>
+              <div style="background:#EF4444;color:white;padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600;">打卡</div>
+            </div>
+          </div>
+          <div style="background:white;border-radius:12px;padding:8px;text-align:center;border:1px dashed #CBD5E1;margin-bottom:10px;">
+            <span style="font-size:11px;color:#6366F1;">📋 查看全部课程 (蓝球 · 剩余 8)</span>
+          </div>
+          <div style="font-size:10px;color:#94A3B8;">📝 最近打卡：钢琴 -1 课时 · 2小时前</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>方案B：底部 Tab 导航重构</h3>
+      <p>将 Drawer 改为 <b>3个底部 Tab</b>：「今日」「课程」「我的」。今日 Tab 为核心打卡页，拇指可达。</p>
+      <div class="mockup" style="width:280px;margin-top:12px;">
+        <div class="mockup-header">新导航结构</div>
+        <div class="mockup-body" style="padding:16px;font-size:12px;">
+          <div style="font-weight:600;margin-bottom:8px;">📅 今日 (Tab1 - 默认)</div>
+          <div style="background:#EEF2FF;padding:8px;border-radius:8px;margin-bottom:6px;">🎹 钢琴 18:00 —— [打卡]</div>
+          <div style="background:#EEF2FF;padding:8px;border-radius:8px;margin-bottom:8px;">📐 数学 16:00 —— [打卡]</div>
+          <hr style="margin:8px 0;">
+          <div style="font-size:10px;color:#999;">📚 课程 (Tab2)</div>
+          <div style="font-size:10px;color:#999;">👤 我的 (Tab3)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>方案C：FAB 悬浮快打卡（最小改动）</h3>
+      <p>Dashboard 保持现状，右下角增加 <b>FAB 按钮</b>，点击弹出底部抽屉列出所有活跃课程+打卡按钮。不改变现有布局。</p>
+      <div class="mockup" style="width:280px;margin-top:12px;">
+        <div class="mockup-header">Dashboard + FAB</div>
+        <div class="mockup-body" style="padding:16px;font-size:12px;position:relative;min-height:120px;">
+          <div style="opacity:0.5;">[现有 Dashboard 内容...]</div>
+          <div style="position:absolute;bottom:12px;right:12px;width:48px;height:48px;background:#6366F1;border-radius:24px;color:white;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 4px 12px rgba(99,102,241,0.4);">+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

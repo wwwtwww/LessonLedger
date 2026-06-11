@@ -40,6 +40,10 @@ export default function DashboardPage() {
     handleAddClass,
     handleUpdateClass,
     handleCheckIn,
+    handleCheckInWithDate,
+    handleUndoCheckIn,
+    handleSkipClass,
+    getYesterdayMissedClasses,
     allClasses,
     logs,
   } = useDashboard();
@@ -128,6 +132,10 @@ export default function DashboardPage() {
           members={members}
           logs={logs}
           onCheckIn={handleCheckIn}
+          onCheckInWithDate={handleCheckInWithDate}
+          onUndoCheckIn={handleUndoCheckIn}
+          onSkipClass={handleSkipClass}
+          getYesterdayMissedClasses={getYesterdayMissedClasses}
         />
       </ScrollView>
 

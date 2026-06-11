@@ -16,3 +16,5 @@ export const SPACING = {
   LG: 24,
   XL: 32,
 };
+
+export const DEFAULT_CLASS_DURATION = 60; // 分钟

@@ -1,0 +1,171 @@
+<h2>方案A 详细设计 — 新 Dashboard 整体布局</h2>
+<p class="subtitle">从上到下的页面结构，标注了每个区域的变更程度</p>
+
+<div class="section">
+  <h3>📐 新版 Dashboard 完整布局</h3>
+</div>
+
+<div style="display:flex; gap:20px; justify-content:center; flex-wrap:wrap;">
+
+  <!-- New Dashboard Mockup -->
+  <div class="mockup" style="width:300px;">
+    <div class="mockup-header">新版 Dashboard（6月10日 周三）</div>
+    <div class="mockup-body" style="padding:0;font-size:12px;">
+      
+      <!-- Header -->
+      <div style="padding:12px 16px 8px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #F1F5F9;">
+        <div style="font-weight:700;font-size:15px;color:#0F172A;">📊 仪表盘</div>
+        <div style="width:32px;height:32px;background:#F1F5F9;border-radius:16px;display:flex;align-items:center;justify-content:center;">🔔</div>
+      </div>
+
+      <!-- 日期栏 -->
+      <div style="padding:12px 16px 4px;">
+        <div style="font-size:14px;font-weight:700;color:#1E293B;">6月10日 周三</div>
+        <div style="font-size:11px;color:#94A3B8;margin-top:2px;">今日 3 门课程待上</div>
+      </div>
+
+      <!-- 汇总条（压缩到一行） -->
+      <div style="padding:8px 16px;">
+        <div style="display:flex;background:#F8FAFC;border-radius:12px;padding:10px 12px;gap:8px;">
+          <div style="flex:1;text-align:center;border-right:1px solid #E2E8F0;padding-right:8px;">
+            <div style="font-size:10px;color:#94A3B8;">总支出</div>
+            <div style="font-weight:700;font-size:14px;color:#1E293B;">¥8,800</div>
+          </div>
+          <div style="flex:1;text-align:center;border-right:1px solid #E2E8F0;padding:0 8px;">
+            <div style="font-size:10px;color:#94A3B8;">总消耗</div>
+            <div style="font-weight:700;font-size:14px;color:#1E293B;">24课时</div>
+          </div>
+          <div style="flex:1;text-align:center;padding-left:8px;">
+            <div style="font-size:10px;color:#94A3B8;">剩余</div>
+            <div style="font-weight:700;font-size:14px;color:#6366F1;">36课时</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 成员切换器（保留） -->
+      <div style="padding:4px 16px;display:flex;gap:8px;align-items:center;">
+        <div style="width:38px;height:38px;border-radius:14px;background:#EEF2FF;display:flex;align-items:center;justify-content:center;font-size:16px;border:2px solid #6366F1;">🌍</div>
+        <div style="width:38px;height:38px;border-radius:14px;background:white;display:flex;align-items:center;justify-content:center;font-size:16px;">👦</div>
+        <div style="width:38px;height:38px;border-radius:14px;background:white;display:flex;align-items:center;justify-content:center;font-size:16px;">👧</div>
+        <div style="width:38px;height:38px;border-radius:14px;border:1px dashed #CBD5E1;display:flex;align-items:center;justify-content:center;font-size:18px;color:#94A3B8;">+</div>
+      </div>
+
+      <!-- ⭐ 今日课程区域（核心变更） -->
+      <div style="padding:12px 16px;">
+        <div style="font-size:13px;font-weight:600;color:#475569;margin-bottom:10px;">📅 今日课程</div>
+        
+        <!-- 正常排期课程卡片 -->
+        <div style="background:#FFFFFF;border-radius:16px;padding:14px;margin-bottom:8px;border:1px solid #E2E8F0;display:flex;justify-content:space-between;align-items:center;">
+          <div style="display:flex;align-items:center;gap:10px;flex:1;">
+            <div style="width:40px;height:40px;border-radius:20px;background:#EEF2FF;display:flex;align-items:center;justify-content:center;font-size:18px;">👦</div>
+            <div>
+              <div style="font-weight:600;font-size:13px;color:#1E293B;">🎹 钢琴</div>
+              <div style="font-size:10px;color:#94A3B8;">小明 · 18:00 · 剩余 12</div>
+            </div>
+          </div>
+          <div style="background:#6366F1;color:white;padding:8px 18px;border-radius:24px;font-size:13px;font-weight:700;">打卡</div>
+        </div>
+
+        <div style="background:#FFFFFF;border-radius:16px;padding:14px;margin-bottom:8px;border:1px solid #E2E8F0;display:flex;justify-content:space-between;align-items:center;">
+          <div style="display:flex;align-items:center;gap:10px;flex:1;">
+            <div style="width:40px;height:40px;border-radius:20px;background:#EEF2FF;display:flex;align-items:center;justify-content:center;font-size:18px;">👧</div>
+            <div>
+              <div style="font-weight:600;font-size:13px;color:#1E293B;">📐 数学</div>
+              <div style="font-size:10px;color:#94A3B8;">小红 · 16:00 · 剩余 5</div>
+            </div>
+          </div>
+          <div style="background:#6366F1;color:white;padding:8px 18px;border-radius:24px;font-size:13px;font-weight:700;">打卡</div>
+        </div>
+
+        <!-- 预警课程卡片（红色高亮） -->
+        <div style="background:#FFF5F5;border-radius:16px;padding:14px;margin-bottom:8px;border:1px solid #FECACA;display:flex;justify-content:space-between;align-items:center;">
+          <div style="display:flex;align-items:center;gap:10px;flex:1;">
+            <div style="width:40px;height:40px;border-radius:20px;background:#FEE2E2;display:flex;align-items:center;justify-content:center;font-size:18px;">👦</div>
+            <div>
+              <div style="font-weight:600;font-size:13px;color:#1E293B;">🎨 美术</div>
+              <div style="font-size:10px;color:#EF4444;">小明 · 15:30 · ⚠️ 剩余 1</div>
+            </div>
+          </div>
+          <div style="background:#EF4444;color:white;padding:8px 18px;border-radius:24px;font-size:13px;font-weight:700;">打卡</div>
+        </div>
+
+        <!-- 已打卡课程（灰色） -->
+        <div style="background:#F8FAFC;border-radius:16px;padding:14px;margin-bottom:8px;border:1px solid #E2E8F0;display:flex;justify-content:space-between;align-items:center;opacity:0.6;">
+          <div style="display:flex;align-items:center;gap:10px;flex:1;">
+            <div style="width:40px;height:40px;border-radius:20px;background:#E2E8F0;display:flex;align-items:center;justify-content:center;font-size:18px;">👦</div>
+            <div>
+              <div style="font-weight:600;font-size:13px;color:#64748B;"><span style="text-decoration:line-through;">🏊 游泳</span> ✅</div>
+              <div style="font-size:10px;color:#94A3B8;">小明 · 已打卡 · 剩余 8</div>
+            </div>
+          </div>
+          <div style="background:#E2E8F0;color:#94A3B8;padding:8px 18px;border-radius:24px;font-size:13px;font-weight:700;">已打卡</div>
+        </div>
+      </div>
+
+      <!-- 全部课程入口 -->
+      <div style="padding:0 16px 12px;">
+        <div style="background:white;border-radius:12px;padding:12px;text-align:center;border:1px dashed #CBD5E1;">
+          <span style="font-size:12px;color:#6366F1;font-weight:500;">📋 查看全部课程 · 蓝球剩8 · 3门其他</span>
+        </div>
+      </div>
+
+      <!-- 最近打卡日志 -->
+      <div style="padding:8px 16px 20px;">
+        <div style="font-size:13px;font-weight:600;color:#475569;margin-bottom:8px;">📝 最近打卡</div>
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #F1F5F9;">
+          <div style="font-size:16px;">👦</div>
+          <div style="flex:1;font-size:11px;color:#475569;">🎹 钢琴 -1 课时 · 剩余 12</div>
+          <div style="font-size:10px;color:#94A3B8;">2小时前</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 0;">
+          <div style="font-size:16px;">👧</div>
+          <div style="flex:1;font-size:11px;color:#475569;">📐 数学 -1 次 · 剩余 5</div>
+          <div style="font-size:10px;color:#94A3B8;">昨天</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Change Legend -->
+  <div style="width:260px;font-size:12px;color:#475569;">
+    <h4 style="margin-top:0;">变更说明</h4>
+    <div style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+        <span style="display:inline-block;width:12px;height:12px;background:#10B981;border-radius:3px;flex-shrink:0;"></span>
+        <b>新增：「今日课程」区域</b> — 根据 Schedule 匹配今天星期几，自动展示该上的课
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+        <span style="display:inline-block;width:12px;height:12px;background:#F59E0B;border-radius:3px;flex-shrink:0;"></span>
+        <b>调整：汇总卡片</b> — 从三大卡片压缩为一行统计条，腾出空间给课程卡片
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+        <span style="display:inline-block;width:12px;height:12px;background:#3B82F6;border-radius:3px;flex-shrink:0;"></span>
+        <b>保留：成员切换器</b> — 位置不变，切换后今日课程同步过滤
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+        <span style="display:inline-block;width:12px;height:12px;background:#EF4444;border-radius:3px;flex-shrink:0;"></span>
+        <b>移除：WarningSection 独立区域</b> — 预警课程直接融入今日课程卡片（红色高亮）
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+        <span style="display:inline-block;width:12px;height:12px;background:#8B5CF6;border-radius:3px;flex-shrink:0;"></span>
+        <b>新增：已打卡状态</b> — 今日已打卡课程显示灰色+✅标记，避免重复打卡
+      </div>
+    </div>
+
+    <h4>卡片三种状态</h4>
+    <div style="background:white;border:1px solid #E2E8F0;border-radius:12px;padding:10px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+      <div><b style="color:#6366F1;">正常排期</b><br><span style="font-size:10px;color:#94A3B8;">剩余充足 → 紫色按钮</span></div>
+      <div style="background:#6366F1;color:white;padding:4px 12px;border-radius:16px;font-size:11px;font-weight:600;">打卡</div>
+    </div>
+    <div style="background:#FFF5F5;border:1px solid #FECACA;border-radius:12px;padding:10px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+      <div><b style="color:#EF4444;">预警</b><br><span style="font-size:10px;color:#94A3B8;">剩余 ≤3 → 红色高亮</span></div>
+      <div style="background:#EF4444;color:white;padding:4px 12px;border-radius:16px;font-size:11px;font-weight:600;">打卡</div>
+    </div>
+    <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;padding:10px;display:flex;justify-content:space-between;align-items:center;opacity:0.6;">
+      <div><b style="color:#64748B;">已打卡</b><br><span style="font-size:10px;color:#94A3B8;">今日已完成 → 灰色+✅</span></div>
+      <div style="background:#E2E8F0;color:#94A3B8;padding:4px 12px;border-radius:16px;font-size:11px;font-weight:600;">已打卡</div>
+    </div>
+  </div>
+
+</div>
