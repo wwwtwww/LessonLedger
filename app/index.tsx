@@ -143,6 +143,7 @@ export default function DashboardPage() {
         onAdd={onSaveClass}
         members={members}
         initialData={editingClass}
+        classes={allClasses}
       />
     </SafeAreaView>
   );

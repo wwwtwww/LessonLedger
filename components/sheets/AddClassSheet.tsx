@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Platform,
   Modal,
+  Alert,
 } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop, BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -14,16 +15,18 @@ import { Member, ClassItem, ScheduleEntry } from '../../types';
 import SchedulePicker from '../ui/SchedulePicker';
 import { Feather } from '@expo/vector-icons';
 import { COLORS } from '../../utils/colors';
+import { hasScheduleConflict } from '../../utils/scheduleConflict';
 
 interface AddClassSheetProps {
   visible: boolean;
   onClose: () => void;
-  onAdd: (data: Partial<ClassItem> & { name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: ScheduleEntry[]; unitType: 'lesson' | 'session' }) => void;
+  onAdd: (data: Partial<ClassItem> & { name: string; memberId: string; totalPrice: number; totalLessons: number; schedule: ScheduleEntry[]; unitType: 'lesson' | 'session'; duration?: number }) => void;
   members: Member[];
   initialData?: ClassItem | null;
+  classes?: ClassItem[];
 }
 
-export default function AddClassSheet({ visible, onClose, onAdd, members, initialData }: AddClassSheetProps) {
+export default function AddClassSheet({ visible, onClose, onAdd, members, initialData, classes }: AddClassSheetProps) {
   const { lang } = useLanguage();
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
@@ -32,6 +35,7 @@ export default function AddClassSheet({ visible, onClose, onAdd, members, initia
   const [totalLessons, setTotalLessons] = useState('');
   const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
   const [unitType, setUnitType] = useState<'lesson' | 'session'>('lesson');
+  const [duration, setDuration] = useState<number>(60);
   const [error, setError] = useState('');
   const [showMemberPicker, setShowMemberPicker] = useState(false);
   const prevVisible = useRef(visible);
@@ -65,6 +69,7 @@ export default function AddClassSheet({ visible, onClose, onAdd, members, initia
         setTotalPrice(initialData.totalPrice.toString());
         setTotalLessons(initialData.totalLessons.toString());
         setUnitType(initialData.unitType || 'lesson');
+        setDuration(initialData.duration || 60);
         
         let parsedSchedule: ScheduleEntry[] = [];
         if (typeof initialData.schedule === 'string') {
@@ -80,6 +85,7 @@ export default function AddClassSheet({ visible, onClose, onAdd, members, initia
         setTotalLessons('');
         setSchedule([]);
         setUnitType('lesson');
+        setDuration(60);
       }
       setError('');
     }
@@ -105,6 +111,18 @@ export default function AddClassSheet({ visible, onClose, onAdd, members, initia
   };
 
   const handleAdd = () => {
+    if (classes) {
+      const existingMemberClasses = classes.filter(c => c.memberId === memberId && c.id !== initialData?.id);
+      const { conflict, conflictingClass } = hasScheduleConflict(schedule, duration, existingMemberClasses);
+
+      if (conflict) {
+        const msg = `冲突提示：该时间段与 [${conflictingClass}] 的上课时间重合，请修改时间后重试。`;
+        if (Platform.OS === 'web') alert(msg);
+        else Alert.alert('时间冲突', msg);
+        return;
+      }
+    }
+
     onAdd({
       ...(initialData?.id ? { id: initialData.id } : {}),
       name: name.trim(),
@@ -113,6 +131,7 @@ export default function AddClassSheet({ visible, onClose, onAdd, members, initia
       totalLessons: Number(totalLessons),
       schedule,
       unitType,
+      duration,
     });
   };
 
