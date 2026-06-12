@@ -178,7 +178,7 @@ ALTER TABLE logs ENABLE ROW LEVEL SECURITY;
 CREATE OR REPLACE FUNCTION get_current_family_id()
 RETURNS UUID AS $$
   SELECT family_id FROM user_profiles WHERE id = auth.uid() LIMIT 1;
-$$ LANGUAGE sql SECURITY DEFINER SET search_path = public;
+$$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
 
 -- user_profiles policies
 CREATE POLICY "Users can view their own profile" ON user_profiles FOR SELECT USING (auth.uid() = id);
