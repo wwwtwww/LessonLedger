@@ -21,7 +21,7 @@ CREATE TABLE families (
 -- 3. Create user_profiles table (Links auth.users to families)
 CREATE TABLE user_profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  family_id UUID REFERENCES families(id) ON DELETE CASCADE,
+  family_id UUID NOT NULL REFERENCES families(id) ON DELETE CASCADE,
   role VARCHAR(20) NOT NULL CHECK (role IN ('creator', 'member')),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -29,7 +29,7 @@ CREATE TABLE user_profiles (
 -- 4. Create members table
 CREATE TABLE members (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  family_id UUID REFERENCES families(id) ON DELETE CASCADE,
+  family_id UUID NOT NULL REFERENCES families(id) ON DELETE CASCADE,
   name VARCHAR(100) NOT NULL,
   member_type VARCHAR(20) NOT NULL CHECK (member_type IN ('adult', 'kid')),
   avatar VARCHAR(255),
@@ -41,12 +41,12 @@ CREATE TABLE members (
 -- 5. Create classes table
 CREATE TABLE classes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  family_id UUID REFERENCES families(id) ON DELETE CASCADE,
-  member_id UUID REFERENCES members(id) ON DELETE CASCADE,
+  family_id UUID NOT NULL REFERENCES families(id) ON DELETE CASCADE,
+  member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
   total_price DECIMAL(10, 2) DEFAULT 0 NOT NULL,
-  total_lessons INT DEFAULT 0 NOT NULL,
-  done_lessons INT DEFAULT 0 NOT NULL,
+  total_lessons DECIMAL(10, 2) DEFAULT 0 NOT NULL,
+  done_lessons DECIMAL(10, 2) DEFAULT 0 NOT NULL,
   currency VARCHAR(10) DEFAULT '¥',
   unit_type VARCHAR(20) NOT NULL CHECK (unit_type IN ('lesson', 'session')),
   duration INT DEFAULT 60,
@@ -58,8 +58,8 @@ CREATE TABLE classes (
 -- 6. Create logs table (Event Sourced Ledger)
 CREATE TABLE logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  family_id UUID REFERENCES families(id) ON DELETE CASCADE,
-  class_id UUID REFERENCES classes(id) ON DELETE CASCADE,
+  family_id UUID NOT NULL REFERENCES families(id) ON DELETE CASCADE,
+  class_id UUID NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
   type VARCHAR(50) NOT NULL CHECK (type IN ('check_in', 'skip', 'top_up', 'init', 'reversal', 'adjustment', 'refund', 'bonus')),
   done_lesson_delta DECIMAL(10,2) DEFAULT 0 NOT NULL,
   total_lesson_delta DECIMAL(10,2) DEFAULT 0 NOT NULL,
