@@ -54,6 +54,8 @@ CREATE TABLE classes (
   schedule JSONB DEFAULT '[]'::JSONB,
   is_deleted BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
+  FOREIGN KEY (member_id, family_id) REFERENCES members(id, family_id) ON DELETE CASCADE, -- Tenant Consistency
+  UNIQUE (id, family_id), -- Tenant Consistency: Composite unique key
   CHECK (allow_overrun OR done_lessons <= total_lessons)
 );
 
