@@ -126,7 +126,13 @@ CREATE OR REPLACE FUNCTION validate_log_insert()
 RETURNS TRIGGER AS $$
 DECLARE
   target_log RECORD;
+  existing_active_log_id UUID;
 BEGIN
+  -- Idempotency: check_in and skip must have a schedule instance key
+  IF NEW.type IN ('check_in', 'skip') AND NEW.schedule_instance_key IS NULL THEN
+     RAISE EXCEPTION 'check_in and skip logs must provide a schedule_instance_key.';
+  END IF;
+
   -- Validate reversal semantics
   IF NEW.type = 'reversal' THEN
     IF NEW.reversed_log_id IS NULL THEN
@@ -138,6 +144,11 @@ BEGIN
       RAISE EXCEPTION 'Target log for reversal not found';
     END IF;
     
+    -- Tenant Consistency Check
+    IF target_log.family_id != NEW.family_id OR target_log.class_id != NEW.class_id THEN
+      RAISE EXCEPTION 'Reversal log must belong to the same family and class';
+    END IF;
+    
     IF target_log.type = 'reversal' THEN
       RAISE EXCEPTION 'Cannot reverse a reversal log';
     END IF;
@@ -147,6 +158,24 @@ BEGIN
        NEW.total_lesson_delta != -target_log.total_lesson_delta OR
        NEW.price_delta != -target_log.price_delta THEN
       RAISE EXCEPTION 'Reversal deltas must exactly offset the original log deltas';
+    END IF;
+  END IF;
+
+  -- Idempotency: Validate schedule_instance_key uniqueness for active events
+  IF NEW.type IN ('check_in', 'skip') AND NEW.schedule_instance_key IS NOT NULL THEN
+    -- Look for an active (un-reversed) log for this instance
+    -- Note: Since this is BEFORE INSERT, the new log isn't in the table yet.
+    SELECT l.id INTO existing_active_log_id
+    FROM logs l
+    LEFT JOIN logs r ON r.reversed_log_id = l.id AND r.type = 'reversal'
+    WHERE l.class_id = NEW.class_id 
+      AND l.schedule_instance_key = NEW.schedule_instance_key
+      AND l.type IN ('check_in', 'skip')
+      AND r.id IS NULL -- Meaning it hasn't been reversed
+    LIMIT 1;
+
+    IF existing_active_log_id IS NOT NULL THEN
+      RAISE EXCEPTION 'An active check_in or skip already exists for this schedule instance.';
     END IF;
   END IF;
 
@@ -174,8 +203,14 @@ BEGIN
       done_lessons = done_lessons + NEW.done_lesson_delta,
       total_lessons = total_lessons + NEW.total_lesson_delta,
       total_price = total_price + NEW.price_delta
-    WHERE id = NEW.class_id;
+    WHERE id = NEW.class_id AND family_id = NEW.family_id;
     
+    -- Tenant Consistency & Projection check
+    IF NOT FOUND THEN
+      PERFORM set_config('app.is_log_trigger', 'false', true);
+      RAISE EXCEPTION 'Target class not found for projection update or family mismatch.';
+    END IF;
+
     -- Reset the protection trigger variable
     PERFORM set_config('app.is_log_trigger', 'false', true);
     
