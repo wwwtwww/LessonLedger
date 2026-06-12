@@ -1,5 +1,8 @@
--- Disable triggers temporarily during rebuild
-SET session_replication_role = replica;
+-- =====================================================================================
+-- WARNING: DEV-ONLY CLEAN SLATE SCRIPT
+-- Do NOT run this script in production. It drops all tables and destroys data.
+-- Use standard Supabase migrations for production schema changes.
+-- =====================================================================================
 
 -- 1. Drop existing tables if they exist
 DROP TABLE IF EXISTS logs CASCADE;
@@ -7,9 +10,6 @@ DROP TABLE IF EXISTS classes CASCADE;
 DROP TABLE IF EXISTS members CASCADE;
 DROP TABLE IF EXISTS user_profiles CASCADE;
 DROP TABLE IF EXISTS families CASCADE;
-
--- Re-enable triggers
-SET session_replication_role = DEFAULT;
 
 -- 2. Create families table
 CREATE TABLE families (
