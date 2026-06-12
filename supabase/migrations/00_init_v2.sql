@@ -78,3 +78,45 @@ CREATE INDEX idx_classes_family_id ON classes(family_id);
 CREATE INDEX idx_classes_member_id ON classes(member_id);
 CREATE INDEX idx_logs_family_id ON logs(family_id);
 CREATE INDEX idx_logs_class_id ON logs(class_id);
+
+-- 7. Idempotency Constraints (Prevent double-undo and double-checkin)
+-- Only one reversal per original log
+CREATE UNIQUE INDEX unique_reversal_per_log
+ON logs (reversed_log_id)
+WHERE type = 'reversal' AND reversed_log_id IS NOT NULL;
+
+-- Only one check_in or skip per specific schedule instance
+CREATE UNIQUE INDEX unique_schedule_handling
+ON logs (class_id, schedule_instance_key)
+WHERE type IN ('check_in', 'skip') AND schedule_instance_key IS NOT NULL;
+
+-- 8. Event Sourcing Trigger (Project logs onto classes)
+CREATE OR REPLACE FUNCTION process_class_log()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- We ONLY handle INSERT. Logs are append-only.
+  IF TG_OP = 'INSERT' THEN
+    -- Update the class with the deltas
+    UPDATE classes 
+    SET 
+      done_lessons = GREATEST(0, done_lessons + NEW.done_lesson_delta),
+      total_lessons = GREATEST(0, total_lessons + NEW.total_lesson_delta),
+      total_price = GREATEST(0, total_price + NEW.price_delta)
+    WHERE id = NEW.class_id;
+    
+    RETURN NEW;
+  END IF;
+  
+  -- Prevent UPDATE and DELETE on logs completely to enforce append-only
+  IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'Updates and Deletes are strictly forbidden on the event-sourced logs table. Use a reversal event.';
+  END IF;
+  
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER log_inserted_or_deleted
+AFTER INSERT OR UPDATE OR DELETE ON logs
+FOR EACH ROW
+EXECUTE FUNCTION process_class_log();
