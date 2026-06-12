@@ -115,3 +115,88 @@ CREATE TRIGGER log_inserted_or_deleted
 AFTER INSERT OR UPDATE OR DELETE ON logs
 FOR EACH ROW
 EXECUTE FUNCTION process_class_log();
+
+-- 9. Helper to create a new family and link the current auth user
+CREATE OR REPLACE FUNCTION create_new_family()
+RETURNS UUID AS $$
+DECLARE
+  chars TEXT := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; -- Removed ambiguous 0, O, 1, I
+  new_invite_code VARCHAR(6);
+  new_family_id UUID;
+  i INTEGER := 0;
+  max_retries CONSTANT INTEGER := 10;
+BEGIN
+  FOR attempts IN 1..max_retries LOOP
+    BEGIN
+      new_invite_code := '';
+      FOR i IN 1..6 LOOP
+        new_invite_code := new_invite_code || substr(chars, floor(random() * length(chars) + 1)::integer, 1);
+      END LOOP;
+      
+      INSERT INTO families (invite_code) VALUES (new_invite_code) RETURNING id INTO new_family_id;
+      
+      INSERT INTO user_profiles (id, family_id, role) VALUES (auth.uid(), new_family_id, 'creator')
+      ON CONFLICT (id) DO UPDATE SET family_id = new_family_id, role = 'creator';
+      
+      RETURN new_family_id;
+      
+    EXCEPTION WHEN unique_violation THEN
+      IF attempts = max_retries THEN
+        RAISE EXCEPTION 'Could not generate a unique invite code after % attempts.', max_retries;
+      END IF;
+    END;
+  END LOOP;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- 10. Helper to join an existing family
+CREATE OR REPLACE FUNCTION join_family(invite_code_input VARCHAR)
+RETURNS UUID AS $$
+DECLARE
+  target_family_id UUID;
+BEGIN
+  SELECT id INTO target_family_id FROM families WHERE invite_code = invite_code_input;
+  
+  IF target_family_id IS NULL THEN
+    RAISE EXCEPTION 'Invalid invite code.';
+  END IF;
+  
+  INSERT INTO user_profiles (id, family_id, role) VALUES (auth.uid(), target_family_id, 'member')
+  ON CONFLICT (id) DO UPDATE SET family_id = target_family_id, role = 'member';
+  
+  RETURN target_family_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- 11. Enable RLS and setup policies
+ALTER TABLE families ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE classes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE logs ENABLE ROW LEVEL SECURITY;
+
+CREATE OR REPLACE FUNCTION get_current_family_id()
+RETURNS UUID AS $$
+  SELECT family_id FROM user_profiles WHERE id = auth.uid() LIMIT 1;
+$$ LANGUAGE sql SECURITY DEFINER SET search_path = public;
+
+-- user_profiles policies
+CREATE POLICY "Users can view their own profile" ON user_profiles FOR SELECT USING (auth.uid() = id);
+
+-- families policies
+CREATE POLICY "Users can view their own family" ON families FOR SELECT USING (id = get_current_family_id());
+
+-- members policies
+CREATE POLICY "Users can view family members" ON members FOR SELECT USING (family_id = get_current_family_id());
+CREATE POLICY "Users can insert family members" ON members FOR INSERT WITH CHECK (family_id = get_current_family_id());
+CREATE POLICY "Users can update family members" ON members FOR UPDATE USING (family_id = get_current_family_id());
+
+-- classes policies
+CREATE POLICY "Users can view family classes" ON classes FOR SELECT USING (family_id = get_current_family_id());
+CREATE POLICY "Users can insert family classes" ON classes FOR INSERT WITH CHECK (family_id = get_current_family_id());
+CREATE POLICY "Users can update family classes" ON classes FOR UPDATE USING (family_id = get_current_family_id());
+
+-- logs policies
+CREATE POLICY "Users can view family logs" ON logs FOR SELECT USING (family_id = get_current_family_id());
+CREATE POLICY "Users can insert family logs" ON logs FOR INSERT WITH CHECK (family_id = get_current_family_id());
+-- Note: DELETE/UPDATE is forbidden by the trigger above anyway.
