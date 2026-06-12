@@ -47,13 +47,39 @@ CREATE TABLE classes (
   total_price DECIMAL(10, 2) DEFAULT 0 NOT NULL CHECK (total_price >= 0),
   total_lessons DECIMAL(10, 2) DEFAULT 0 NOT NULL CHECK (total_lessons >= 0),
   done_lessons DECIMAL(10, 2) DEFAULT 0 NOT NULL CHECK (done_lessons >= 0),
+  allow_overrun BOOLEAN DEFAULT FALSE NOT NULL,
   currency VARCHAR(10) DEFAULT '¥',
   unit_type VARCHAR(20) NOT NULL CHECK (unit_type IN ('lesson', 'session')),
   duration INT DEFAULT 60,
   schedule JSONB DEFAULT '[]'::JSONB,
   is_deleted BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  CHECK (allow_overrun OR done_lessons <= total_lessons)
 );
+
+-- Protect derived fields in classes
+CREATE OR REPLACE FUNCTION protect_class_derived_fields()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Bypass protection if updated by our log projection trigger
+  IF current_setting('app.is_log_trigger', true) = 'true' THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.done_lessons IS DISTINCT FROM OLD.done_lessons OR 
+     NEW.total_lessons IS DISTINCT FROM OLD.total_lessons OR 
+     NEW.total_price IS DISTINCT FROM OLD.total_price THEN
+    RAISE EXCEPTION 'Derived fields (done_lessons, total_lessons, total_price) cannot be updated directly by clients. Use logs.';
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_protect_class_derived_fields
+BEFORE UPDATE ON classes
+FOR EACH ROW
+EXECUTE FUNCTION protect_class_derived_fields();
 
 -- 6. Create logs table (Event Sourced Ledger)
 CREATE TABLE logs (
@@ -68,7 +94,15 @@ CREATE TABLE logs (
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   reversed_log_id UUID REFERENCES logs(id), -- For reversals
   schedule_instance_key VARCHAR(255), -- For idempotency (class_id + date + time)
-  note TEXT
+  note TEXT,
+  
+  -- Delta Constraints
+  CHECK (
+    (type = 'skip' AND done_lesson_delta = 0 AND total_lesson_delta = 0 AND price_delta = 0) OR
+    (type = 'check_in' AND total_lesson_delta = 0 AND price_delta = 0) OR
+    (type = 'reversal' AND reversed_log_id IS NOT NULL) OR
+    (type NOT IN ('skip', 'check_in', 'reversal'))
+  )
 );
 
 -- Performance Indexes
@@ -85,12 +119,53 @@ CREATE UNIQUE INDEX unique_reversal_per_log
 ON logs (reversed_log_id)
 WHERE type = 'reversal' AND reversed_log_id IS NOT NULL;
 
+-- Semantic validation for logs (BEFORE INSERT)
+CREATE OR REPLACE FUNCTION validate_log_insert()
+RETURNS TRIGGER AS $$
+DECLARE
+  target_log RECORD;
+BEGIN
+  -- Validate reversal semantics
+  IF NEW.type = 'reversal' THEN
+    IF NEW.reversed_log_id IS NULL THEN
+      RAISE EXCEPTION 'Reversal log must specify reversed_log_id';
+    END IF;
+    
+    SELECT * INTO target_log FROM logs WHERE id = NEW.reversed_log_id;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Target log for reversal not found';
+    END IF;
+    
+    IF target_log.type = 'reversal' THEN
+      RAISE EXCEPTION 'Cannot reverse a reversal log';
+    END IF;
+    
+    -- Must exactly offset original deltas
+    IF NEW.done_lesson_delta != -target_log.done_lesson_delta OR
+       NEW.total_lesson_delta != -target_log.total_lesson_delta OR
+       NEW.price_delta != -target_log.price_delta THEN
+      RAISE EXCEPTION 'Reversal deltas must exactly offset the original log deltas';
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_validate_log_insert
+BEFORE INSERT ON logs
+FOR EACH ROW
+EXECUTE FUNCTION validate_log_insert();
+
 -- 8. Event Sourcing Trigger (Project logs onto classes)
 CREATE OR REPLACE FUNCTION process_class_log()
 RETURNS TRIGGER AS $$
 BEGIN
   -- We ONLY handle INSERT. Logs are append-only.
   IF TG_OP = 'INSERT' THEN
+    -- Temporarily disable the protection trigger
+    PERFORM set_config('app.is_log_trigger', 'true', true);
+
     -- Update the class with the raw deltas. The CHECK constraints on the table will prevent illegal states.
     UPDATE classes 
     SET 
@@ -98,6 +173,9 @@ BEGIN
       total_lessons = total_lessons + NEW.total_lesson_delta,
       total_price = total_price + NEW.price_delta
     WHERE id = NEW.class_id;
+    
+    -- Reset the protection trigger variable
+    PERFORM set_config('app.is_log_trigger', 'false', true);
     
     RETURN NEW;
   END IF;
@@ -199,4 +277,3 @@ CREATE POLICY "Users can update family classes" ON classes FOR UPDATE USING (fam
 -- logs policies
 CREATE POLICY "Users can view family logs" ON logs FOR SELECT USING (family_id = get_current_family_id());
 CREATE POLICY "Users can insert family logs" ON logs FOR INSERT WITH CHECK (family_id = get_current_family_id());
--- Note: DELETE/UPDATE is forbidden by the trigger above anyway.
