@@ -71,6 +71,16 @@ BEGIN
     RETURN NEW;
   END IF;
 
+  IF TG_OP = 'INSERT' THEN
+    IF COALESCE(NEW.done_lessons, 0) <> 0 OR
+       COALESCE(NEW.total_lessons, 0) <> 0 OR
+       COALESCE(NEW.total_price, 0) <> 0 THEN
+      RAISE EXCEPTION 'Derived fields must start at zero. Use create_class_with_init to initialize balances.';
+    END IF;
+
+    RETURN NEW;
+  END IF;
+
   IF NEW.done_lessons IS DISTINCT FROM OLD.done_lessons OR 
      NEW.total_lessons IS DISTINCT FROM OLD.total_lessons OR 
      NEW.total_price IS DISTINCT FROM OLD.total_price THEN
@@ -82,7 +92,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_protect_class_derived_fields
-BEFORE UPDATE ON classes
+BEFORE INSERT OR UPDATE ON classes
 FOR EACH ROW
 EXECUTE FUNCTION protect_class_derived_fields();
 
@@ -92,7 +102,7 @@ CREATE TABLE logs (
   family_id UUID NOT NULL REFERENCES families(id) ON DELETE CASCADE,
   class_id UUID NOT NULL REFERENCES classes(id) ON DELETE RESTRICT,
   client_event_id TEXT NOT NULL,
-  type VARCHAR(50) NOT NULL CHECK (type IN ('check_in', 'skip', 'top_up', 'init', 'reversal', 'adjustment', 'refund', 'bonus')),
+  type VARCHAR(50) NOT NULL CHECK (type IN ('check_in', 'skip', 'top_up', 'init', 'reversal')),
   done_lesson_delta DECIMAL(10,2) DEFAULT 0 NOT NULL,
   total_lesson_delta DECIMAL(10,2) DEFAULT 0 NOT NULL,
   price_delta DECIMAL(10,2) DEFAULT 0 NOT NULL,
@@ -110,10 +120,7 @@ CREATE TABLE logs (
     (type = 'check_in' AND done_lesson_delta > 0 AND total_lesson_delta = 0 AND price_delta = 0) OR
     (type = 'reversal' AND reversed_log_id IS NOT NULL) OR
     (type = 'init' AND done_lesson_delta >= 0 AND total_lesson_delta >= done_lesson_delta AND price_delta >= 0) OR
-    (type = 'top_up' AND done_lesson_delta = 0 AND total_lesson_delta > 0 AND price_delta >= 0) OR
-    (type = 'bonus' AND done_lesson_delta = 0 AND total_lesson_delta > 0 AND price_delta = 0) OR
-    (type = 'refund' AND done_lesson_delta = 0 AND total_lesson_delta <= 0 AND price_delta < 0) OR
-    (type = 'adjustment')
+    (type = 'top_up' AND done_lesson_delta = 0 AND total_lesson_delta > 0 AND price_delta >= 0)
   )
 );
 
@@ -125,6 +132,7 @@ CREATE INDEX idx_classes_member_id ON classes(member_id);
 CREATE INDEX idx_logs_family_id ON logs(family_id);
 CREATE INDEX idx_logs_class_id ON logs(class_id);
 CREATE INDEX idx_logs_reversed_log_id ON logs(reversed_log_id);
+CREATE INDEX idx_logs_class_instance ON logs(class_id, schedule_instance_key) WHERE schedule_instance_key IS NOT NULL;
 
 -- 7. Idempotency Constraints
 -- Only one reversal per original log
@@ -139,6 +147,11 @@ DECLARE
   target_log RECORD;
   existing_active_log_id UUID;
 BEGIN
+  -- Validate class is not deleted
+  IF EXISTS (SELECT 1 FROM classes WHERE id = NEW.class_id AND is_deleted = TRUE) THEN
+    RAISE EXCEPTION 'Cannot create logs for a deleted class.';
+  END IF;
+
   -- Idempotency: check_in and skip must have a schedule instance key
   IF NEW.type IN ('check_in', 'skip') AND NEW.schedule_instance_key IS NULL THEN
      RAISE EXCEPTION 'check_in and skip logs must provide a schedule_instance_key.';
@@ -234,7 +247,7 @@ BEGIN
   
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 CREATE TRIGGER trg_project_log_insert
 AFTER INSERT ON logs
@@ -319,12 +332,277 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
+-- 11. Controlled class and log write RPCs
+CREATE OR REPLACE FUNCTION create_class_with_init(
+  member_id_input UUID,
+  name_input VARCHAR,
+  unit_type_input VARCHAR,
+  client_event_id_input TEXT,
+  total_lessons_input DECIMAL DEFAULT 0,
+  done_lessons_input DECIMAL DEFAULT 0,
+  total_price_input DECIMAL DEFAULT 0,
+  currency_input VARCHAR DEFAULT '¥',
+  duration_input INT DEFAULT 60,
+  schedule_input JSONB DEFAULT '[]'::JSONB,
+  occurred_at_input TIMESTAMPTZ DEFAULT NOW(),
+  note_input TEXT DEFAULT NULL
+)
+RETURNS UUID AS $$
+DECLARE
+  current_family_id UUID;
+  new_class_id UUID;
+BEGIN
+  current_family_id := get_current_family_id();
+
+  IF current_family_id IS NULL THEN
+    RAISE EXCEPTION 'Current user must belong to a family before creating classes.';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM members
+    WHERE id = member_id_input AND family_id = current_family_id AND is_deleted = FALSE
+  ) THEN
+    RAISE EXCEPTION 'Member not found in current family.';
+  END IF;
+
+  INSERT INTO classes (family_id, member_id, name, currency, unit_type, duration, schedule)
+  VALUES (current_family_id, member_id_input, name_input, currency_input, unit_type_input, duration_input, schedule_input)
+  RETURNING id INTO new_class_id;
+
+  INSERT INTO logs (
+    family_id,
+    class_id,
+    client_event_id,
+    type,
+    done_lesson_delta,
+    total_lesson_delta,
+    price_delta,
+    occurred_at,
+    note
+  ) VALUES (
+    current_family_id,
+    new_class_id,
+    client_event_id_input,
+    'init',
+    done_lessons_input,
+    total_lessons_input,
+    total_price_input,
+    occurred_at_input,
+    note_input
+  );
+
+  RETURN new_class_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+CREATE OR REPLACE FUNCTION check_in_class(
+  class_id_input UUID,
+  client_event_id_input TEXT,
+  schedule_instance_key_input VARCHAR,
+  occurred_at_input TIMESTAMPTZ DEFAULT NOW(),
+  lesson_delta_input DECIMAL DEFAULT 1,
+  note_input TEXT DEFAULT NULL
+)
+RETURNS UUID AS $$
+DECLARE
+  current_family_id UUID;
+  new_log_id UUID;
+BEGIN
+  current_family_id := get_current_family_id();
+
+  IF current_family_id IS NULL THEN
+    RAISE EXCEPTION 'Current user must belong to a family before checking in.';
+  END IF;
+
+  IF lesson_delta_input <= 0 THEN
+    RAISE EXCEPTION 'check_in lesson delta must be positive.';
+  END IF;
+
+  INSERT INTO logs (
+    family_id,
+    class_id,
+    client_event_id,
+    type,
+    done_lesson_delta,
+    total_lesson_delta,
+    price_delta,
+    occurred_at,
+    schedule_instance_key,
+    note
+  ) VALUES (
+    current_family_id,
+    class_id_input,
+    client_event_id_input,
+    'check_in',
+    lesson_delta_input,
+    0,
+    0,
+    occurred_at_input,
+    schedule_instance_key_input,
+    note_input
+  ) RETURNING id INTO new_log_id;
+
+  RETURN new_log_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+CREATE OR REPLACE FUNCTION skip_class(
+  class_id_input UUID,
+  client_event_id_input TEXT,
+  schedule_instance_key_input VARCHAR,
+  occurred_at_input TIMESTAMPTZ DEFAULT NOW(),
+  note_input TEXT DEFAULT NULL
+)
+RETURNS UUID AS $$
+DECLARE
+  current_family_id UUID;
+  new_log_id UUID;
+BEGIN
+  current_family_id := get_current_family_id();
+
+  IF current_family_id IS NULL THEN
+    RAISE EXCEPTION 'Current user must belong to a family before skipping a class.';
+  END IF;
+
+  INSERT INTO logs (
+    family_id,
+    class_id,
+    client_event_id,
+    type,
+    occurred_at,
+    schedule_instance_key,
+    note
+  ) VALUES (
+    current_family_id,
+    class_id_input,
+    client_event_id_input,
+    'skip',
+    occurred_at_input,
+    schedule_instance_key_input,
+    note_input
+  ) RETURNING id INTO new_log_id;
+
+  RETURN new_log_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+CREATE OR REPLACE FUNCTION top_up_class(
+  class_id_input UUID,
+  client_event_id_input TEXT,
+  total_lesson_delta_input DECIMAL,
+  price_delta_input DECIMAL DEFAULT 0,
+  occurred_at_input TIMESTAMPTZ DEFAULT NOW(),
+  note_input TEXT DEFAULT NULL
+)
+RETURNS UUID AS $$
+DECLARE
+  current_family_id UUID;
+  new_log_id UUID;
+BEGIN
+  current_family_id := get_current_family_id();
+
+  IF current_family_id IS NULL THEN
+    RAISE EXCEPTION 'Current user must belong to a family before topping up.';
+  END IF;
+
+  INSERT INTO logs (
+    family_id,
+    class_id,
+    client_event_id,
+    type,
+    done_lesson_delta,
+    total_lesson_delta,
+    price_delta,
+    occurred_at,
+    note
+  ) VALUES (
+    current_family_id,
+    class_id_input,
+    client_event_id_input,
+    'top_up',
+    0,
+    total_lesson_delta_input,
+    price_delta_input,
+    occurred_at_input,
+    note_input
+  ) RETURNING id INTO new_log_id;
+
+  RETURN new_log_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+CREATE OR REPLACE FUNCTION reverse_log(
+  target_log_id_input UUID,
+  client_event_id_input TEXT,
+  occurred_at_input TIMESTAMPTZ DEFAULT NOW(),
+  note_input TEXT DEFAULT NULL
+)
+RETURNS UUID AS $$
+DECLARE
+  current_family_id UUID;
+  target_log RECORD;
+  new_log_id UUID;
+BEGIN
+  current_family_id := get_current_family_id();
+
+  IF current_family_id IS NULL THEN
+    RAISE EXCEPTION 'Current user must belong to a family before reversing logs.';
+  END IF;
+
+  SELECT * INTO target_log
+  FROM logs
+  WHERE id = target_log_id_input AND family_id = current_family_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Target log not found in current family.';
+  END IF;
+
+  INSERT INTO logs (
+    family_id,
+    class_id,
+    client_event_id,
+    type,
+    done_lesson_delta,
+    total_lesson_delta,
+    price_delta,
+    occurred_at,
+    reversed_log_id,
+    schedule_instance_key,
+    note
+  ) VALUES (
+    current_family_id,
+    target_log.class_id,
+    client_event_id_input,
+    'reversal',
+    -target_log.done_lesson_delta,
+    -target_log.total_lesson_delta,
+    -target_log.price_delta,
+    occurred_at_input,
+    target_log.id,
+    target_log.schedule_instance_key,
+    note_input
+  ) RETURNING id INTO new_log_id;
+
+  RETURN new_log_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
 REVOKE EXECUTE ON FUNCTION create_new_family() FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION join_family(VARCHAR) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION create_class_with_init(UUID, VARCHAR, VARCHAR, TEXT, DECIMAL, DECIMAL, DECIMAL, VARCHAR, INT, JSONB, TIMESTAMPTZ, TEXT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION check_in_class(UUID, TEXT, VARCHAR, TIMESTAMPTZ, DECIMAL, TEXT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION skip_class(UUID, TEXT, VARCHAR, TIMESTAMPTZ, TEXT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION top_up_class(UUID, TEXT, DECIMAL, DECIMAL, TIMESTAMPTZ, TEXT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION reverse_log(UUID, TEXT, TIMESTAMPTZ, TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION create_new_family() TO authenticated;
 GRANT EXECUTE ON FUNCTION join_family(VARCHAR) TO authenticated;
+GRANT EXECUTE ON FUNCTION create_class_with_init(UUID, VARCHAR, VARCHAR, TEXT, DECIMAL, DECIMAL, DECIMAL, VARCHAR, INT, JSONB, TIMESTAMPTZ, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION check_in_class(UUID, TEXT, VARCHAR, TIMESTAMPTZ, DECIMAL, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION skip_class(UUID, TEXT, VARCHAR, TIMESTAMPTZ, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION top_up_class(UUID, TEXT, DECIMAL, DECIMAL, TIMESTAMPTZ, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION reverse_log(UUID, TEXT, TIMESTAMPTZ, TEXT) TO authenticated;
 
--- 11. Enable RLS and setup policies
+-- 12. Enable RLS and setup policies
 ALTER TABLE families ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE members ENABLE ROW LEVEL SECURITY;
@@ -335,6 +613,9 @@ CREATE OR REPLACE FUNCTION get_current_family_id()
 RETURNS UUID AS $$
   SELECT family_id FROM user_profiles WHERE id = auth.uid() LIMIT 1;
 $$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
+
+REVOKE EXECUTE ON FUNCTION get_current_family_id() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION get_current_family_id() TO authenticated;
 
 -- user_profiles policies
 CREATE POLICY "Users can view their own profile" ON user_profiles FOR SELECT USING (auth.uid() = id);
@@ -354,4 +635,3 @@ CREATE POLICY "Users can update family classes" ON classes FOR UPDATE USING (fam
 
 -- logs policies
 CREATE POLICY "Users can view family logs" ON logs FOR SELECT USING (family_id = get_current_family_id());
-CREATE POLICY "Users can insert family logs" ON logs FOR INSERT WITH CHECK (family_id = get_current_family_id());
