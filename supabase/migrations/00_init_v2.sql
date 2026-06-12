@@ -4,6 +4,8 @@
 -- Use standard Supabase migrations for production schema changes.
 -- =====================================================================================
 
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- 1. Drop existing tables if they exist
 DROP TABLE IF EXISTS logs CASCADE;
 DROP TABLE IF EXISTS classes CASCADE;
@@ -35,7 +37,8 @@ CREATE TABLE members (
   avatar VARCHAR(255),
   theme_color VARCHAR(20),
   is_deleted BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (id, family_id) -- Tenant Consistency: Composite unique key
 );
 
 -- 5. Create classes table
@@ -87,7 +90,8 @@ EXECUTE FUNCTION protect_class_derived_fields();
 CREATE TABLE logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   family_id UUID NOT NULL REFERENCES families(id) ON DELETE CASCADE,
-  class_id UUID NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+  class_id UUID NOT NULL REFERENCES classes(id) ON DELETE RESTRICT,
+  client_event_id TEXT NOT NULL,
   type VARCHAR(50) NOT NULL CHECK (type IN ('check_in', 'skip', 'top_up', 'init', 'reversal', 'adjustment', 'refund', 'bonus')),
   done_lesson_delta DECIMAL(10,2) DEFAULT 0 NOT NULL,
   total_lesson_delta DECIMAL(10,2) DEFAULT 0 NOT NULL,
@@ -97,13 +101,19 @@ CREATE TABLE logs (
   reversed_log_id UUID REFERENCES logs(id), -- For reversals
   schedule_instance_key VARCHAR(255), -- For idempotency (class_id + date + time)
   note TEXT,
+  FOREIGN KEY (class_id, family_id) REFERENCES classes(id, family_id) ON DELETE RESTRICT,
+  UNIQUE (family_id, client_event_id),
   
   -- Delta Constraints
   CHECK (
     (type = 'skip' AND done_lesson_delta = 0 AND total_lesson_delta = 0 AND price_delta = 0) OR
-    (type = 'check_in' AND total_lesson_delta = 0 AND price_delta = 0) OR
+    (type = 'check_in' AND done_lesson_delta > 0 AND total_lesson_delta = 0 AND price_delta = 0) OR
     (type = 'reversal' AND reversed_log_id IS NOT NULL) OR
-    (type NOT IN ('skip', 'check_in', 'reversal'))
+    (type = 'init' AND done_lesson_delta >= 0 AND total_lesson_delta >= done_lesson_delta AND price_delta >= 0) OR
+    (type = 'top_up' AND done_lesson_delta = 0 AND total_lesson_delta > 0 AND price_delta >= 0) OR
+    (type = 'bonus' AND done_lesson_delta = 0 AND total_lesson_delta > 0 AND price_delta = 0) OR
+    (type = 'refund' AND done_lesson_delta = 0 AND total_lesson_delta <= 0 AND price_delta < 0) OR
+    (type = 'adjustment')
   )
 );
 
@@ -114,6 +124,7 @@ CREATE INDEX idx_classes_family_id ON classes(family_id);
 CREATE INDEX idx_classes_member_id ON classes(member_id);
 CREATE INDEX idx_logs_family_id ON logs(family_id);
 CREATE INDEX idx_logs_class_id ON logs(class_id);
+CREATE INDEX idx_logs_reversed_log_id ON logs(reversed_log_id);
 
 -- 7. Idempotency Constraints
 -- Only one reversal per original log
@@ -152,6 +163,10 @@ BEGIN
     IF target_log.type = 'reversal' THEN
       RAISE EXCEPTION 'Cannot reverse a reversal log';
     END IF;
+
+    IF target_log.type NOT IN ('check_in', 'skip', 'top_up', 'init') THEN
+      RAISE EXCEPTION 'Only check_in, skip, top_up, and init logs can be reversed by this RPC contract';
+    END IF;
     
     -- Must exactly offset original deltas
     IF NEW.done_lesson_delta != -target_log.done_lesson_delta OR
@@ -163,6 +178,11 @@ BEGIN
 
   -- Idempotency: Validate schedule_instance_key uniqueness for active events
   IF NEW.type IN ('check_in', 'skip') AND NEW.schedule_instance_key IS NOT NULL THEN
+    -- Serialize concurrent inserts for the same schedule instance before checking active logs.
+    PERFORM pg_advisory_xact_lock(
+      hashtextextended(NEW.family_id::text || ':' || NEW.class_id::text || ':' || NEW.schedule_instance_key, 0)
+    );
+
     -- Look for an active (un-reversed) log for this instance
     -- Note: Since this is BEFORE INSERT, the new log isn't in the table yet.
     SELECT l.id INTO existing_active_log_id
@@ -192,44 +212,46 @@ EXECUTE FUNCTION validate_log_insert();
 CREATE OR REPLACE FUNCTION process_class_log()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- We ONLY handle INSERT. Logs are append-only.
-  IF TG_OP = 'INSERT' THEN
-    -- Temporarily disable the protection trigger
-    PERFORM set_config('app.is_log_trigger', 'true', true);
+  -- Temporarily disable the protection trigger
+  PERFORM set_config('app.is_log_trigger', 'true', true);
 
-    -- Update the class with the raw deltas. The CHECK constraints on the table will prevent illegal states.
-    UPDATE classes 
-    SET 
-      done_lessons = done_lessons + NEW.done_lesson_delta,
-      total_lessons = total_lessons + NEW.total_lesson_delta,
-      total_price = total_price + NEW.price_delta
-    WHERE id = NEW.class_id AND family_id = NEW.family_id;
-    
-    -- Tenant Consistency & Projection check
-    IF NOT FOUND THEN
-      PERFORM set_config('app.is_log_trigger', 'false', true);
-      RAISE EXCEPTION 'Target class not found for projection update or family mismatch.';
-    END IF;
-
-    -- Reset the protection trigger variable
+  -- Update the class with the raw deltas. The CHECK constraints on the table will prevent illegal states.
+  UPDATE classes 
+  SET 
+    done_lessons = done_lessons + NEW.done_lesson_delta,
+    total_lessons = total_lessons + NEW.total_lesson_delta,
+    total_price = total_price + NEW.price_delta
+  WHERE id = NEW.class_id AND family_id = NEW.family_id;
+  
+  -- Tenant Consistency & Projection check
+  IF NOT FOUND THEN
     PERFORM set_config('app.is_log_trigger', 'false', true);
-    
-    RETURN NEW;
+    RAISE EXCEPTION 'Target class not found for projection update or family mismatch.';
   END IF;
+
+  -- Reset the protection trigger variable
+  PERFORM set_config('app.is_log_trigger', 'false', true);
   
-  -- Prevent UPDATE and DELETE on logs completely to enforce append-only
-  IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
-    RAISE EXCEPTION 'Updates and Deletes are strictly forbidden on the event-sourced logs table. Use a reversal event.';
-  END IF;
-  
-  RETURN NULL;
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER log_inserted_or_deleted
-AFTER INSERT OR UPDATE OR DELETE ON logs
+CREATE TRIGGER trg_project_log_insert
+AFTER INSERT ON logs
 FOR EACH ROW
 EXECUTE FUNCTION process_class_log();
+
+CREATE OR REPLACE FUNCTION prevent_log_mutation()
+RETURNS TRIGGER AS $$
+BEGIN
+  RAISE EXCEPTION 'Updates and Deletes are strictly forbidden on the event-sourced logs table. Use a reversal event.';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_prevent_log_mutation
+BEFORE UPDATE OR DELETE ON logs
+FOR EACH ROW
+EXECUTE FUNCTION prevent_log_mutation();
 
 -- 9. Helper to create a new family and link the current auth user
 CREATE OR REPLACE FUNCTION create_new_family()
@@ -241,6 +263,14 @@ DECLARE
   i INTEGER := 0;
   max_retries CONSTANT INTEGER := 10;
 BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'Authentication is required to create a family.';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM user_profiles WHERE id = auth.uid()) THEN
+    RAISE EXCEPTION 'Current user already belongs to a family.';
+  END IF;
+
   FOR attempts IN 1..max_retries LOOP
     BEGIN
       new_invite_code := '';
@@ -250,8 +280,7 @@ BEGIN
       
       INSERT INTO families (invite_code) VALUES (new_invite_code) RETURNING id INTO new_family_id;
       
-      INSERT INTO user_profiles (id, family_id, role) VALUES (auth.uid(), new_family_id, 'creator')
-      ON CONFLICT (id) DO UPDATE SET family_id = new_family_id, role = 'creator';
+      INSERT INTO user_profiles (id, family_id, role) VALUES (auth.uid(), new_family_id, 'creator');
       
       RETURN new_family_id;
       
@@ -270,18 +299,30 @@ RETURNS UUID AS $$
 DECLARE
   target_family_id UUID;
 BEGIN
-  SELECT id INTO target_family_id FROM families WHERE invite_code = invite_code_input;
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'Authentication is required to join a family.';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM user_profiles WHERE id = auth.uid()) THEN
+    RAISE EXCEPTION 'Current user already belongs to a family.';
+  END IF;
+
+  SELECT id INTO target_family_id FROM families WHERE invite_code = upper(trim(invite_code_input));
   
   IF target_family_id IS NULL THEN
     RAISE EXCEPTION 'Invalid invite code.';
   END IF;
   
-  INSERT INTO user_profiles (id, family_id, role) VALUES (auth.uid(), target_family_id, 'member')
-  ON CONFLICT (id) DO UPDATE SET family_id = target_family_id, role = 'member';
+  INSERT INTO user_profiles (id, family_id, role) VALUES (auth.uid(), target_family_id, 'member');
   
   RETURN target_family_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+REVOKE EXECUTE ON FUNCTION create_new_family() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION join_family(VARCHAR) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION create_new_family() TO authenticated;
+GRANT EXECUTE ON FUNCTION join_family(VARCHAR) TO authenticated;
 
 -- 11. Enable RLS and setup policies
 ALTER TABLE families ENABLE ROW LEVEL SECURITY;
